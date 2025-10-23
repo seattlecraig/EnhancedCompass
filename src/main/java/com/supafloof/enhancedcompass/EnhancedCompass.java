@@ -21,6 +21,7 @@ import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitRunnable;
 
+import java.io.File;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -56,6 +57,9 @@ public class EnhancedCompass extends JavaPlugin implements CommandExecutor, TabC
     // Task that updates boss bars every 0.5 seconds
     private BukkitRunnable updateTask;
     
+    // Directory for storing player data
+    private File playerDataFolder;
+    
     /**
      * Called when the plugin is enabled
      * Sets up config, commands, events, and starts the boss bar update task
@@ -67,6 +71,12 @@ public class EnhancedCompass extends JavaPlugin implements CommandExecutor, TabC
         
         // Initialize configuration manager
         configManager = new ConfigManager(this);
+        
+        // Create player data folder
+        playerDataFolder = new File(getDataFolder(), "playerdata");
+        if (!playerDataFolder.exists()) {
+            playerDataFolder.mkdirs();
+        }
         
         // Register command executor and tab completer
         getCommand("enhancedcompass").setExecutor(this);
@@ -390,7 +400,7 @@ public class EnhancedCompass extends JavaPlugin implements CommandExecutor, TabC
     
     /**
      * Event handler for player disconnect
-     * Cleans up player's compass target and boss bar when they leave
+     * Saves player's compass target and cleans up boss bar when they leave
      * 
      * @param event The player quit event
      */
@@ -398,9 +408,104 @@ public class EnhancedCompass extends JavaPlugin implements CommandExecutor, TabC
     public void onPlayerQuit(PlayerQuitEvent event) {
         Player player = event.getPlayer();
         
-        // Remove player's stored target and boss bar
+        // Save player's target before they leave
+        savePlayerTarget(player);
+        
+        // Remove player's boss bar
         playerTargets.remove(player.getUniqueId());
         removeBossBar(player);
+    }
+    
+    /**
+     * Event handler for player join
+     * Loads player's saved compass target when they join
+     * 
+     * @param event The player join event
+     */
+    @EventHandler
+    public void onPlayerJoin(org.bukkit.event.player.PlayerJoinEvent event) {
+        Player player = event.getPlayer();
+        
+        // Load player's saved target
+        loadPlayerTarget(player);
+    }
+    
+    /**
+     * Saves a player's compass target to a file
+     * 
+     * @param player The player whose target to save
+     */
+    private void savePlayerTarget(Player player) {
+        CompassTarget target = playerTargets.get(player.getUniqueId());
+        
+        if (target == null) {
+            // No target to save, delete file if it exists
+            File playerFile = new File(playerDataFolder, player.getUniqueId().toString() + ".yml");
+            if (playerFile.exists()) {
+                playerFile.delete();
+            }
+            return;
+        }
+        
+        File playerFile = new File(playerDataFolder, player.getUniqueId().toString() + ".yml");
+        org.bukkit.configuration.file.YamlConfiguration config = new org.bukkit.configuration.file.YamlConfiguration();
+        
+        config.set("structure-type", target.structureType);
+        config.set("world", target.location.getWorld().getName());
+        config.set("x", target.location.getX());
+        config.set("y", target.location.getY());
+        config.set("z", target.location.getZ());
+        
+        try {
+            config.save(playerFile);
+        } catch (Exception e) {
+            getLogger().warning("Failed to save compass target for player " + player.getName() + ": " + e.getMessage());
+        }
+    }
+    
+    /**
+     * Loads a player's compass target from a file
+     * 
+     * @param player The player whose target to load
+     */
+    private void loadPlayerTarget(Player player) {
+        File playerFile = new File(playerDataFolder, player.getUniqueId().toString() + ".yml");
+        
+        if (!playerFile.exists()) {
+            return; // No saved target
+        }
+        
+        org.bukkit.configuration.file.YamlConfiguration config = org.bukkit.configuration.file.YamlConfiguration.loadConfiguration(playerFile);
+        
+        try {
+            String structureType = config.getString("structure-type");
+            String worldName = config.getString("world");
+            double x = config.getDouble("x");
+            double y = config.getDouble("y");
+            double z = config.getDouble("z");
+            
+            org.bukkit.World world = Bukkit.getWorld(worldName);
+            
+            if (world == null) {
+                getLogger().warning("Could not load compass target for " + player.getName() + ": world " + worldName + " not found");
+                return;
+            }
+            
+            Location location = new Location(world, x, y, z);
+            CompassTarget target = new CompassTarget(structureType, location);
+            
+            playerTargets.put(player.getUniqueId(), target);
+            player.setCompassTarget(location);
+            
+            // Notify player their target was restored
+            getServer().getScheduler().runTaskLater(this, () -> {
+                player.sendMessage(Component.text("Your compass target has been restored: ", NamedTextColor.GREEN)
+                    .append(Component.text(formatStructureName(structureType), NamedTextColor.AQUA)));
+            }, 20L); // Wait 1 second after join
+            
+        } catch (Exception e) {
+            getLogger().warning("Failed to load compass target for player " + player.getName() + ": " + e.getMessage());
+        }
     }
     
     /**
