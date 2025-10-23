@@ -1,0 +1,20 @@
+name: EnhancedCompass
+version: 1.0.0
+main: com.supafloof.enhancedcompass.EnhancedCompass
+api-version: '1.21'
+author: YourName
+description: Enhanced compass that points to structures with distance tracking
+
+commands:
+  enhancedcompass:
+    description: Set compass to point to a structure
+    usage: /enhancedcompass <structure|current|reload>
+    aliases: [ecompass, ec]
+
+permissions:
+  enhancedcompass.use:
+    description: Allows use of enhanced compass features
+    default: op
+  enhancedcompass.reload:
+    description: Allows reloading the plugin configuration
+    default: op

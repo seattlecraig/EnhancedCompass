@@ -1,0 +1,50 @@
+# EnhancedCompass Configuration
+
+# Search radius in chunks (1 chunk = 16 blocks)
+search-radius: 300
+
+# Worlds where enhanced compass is disabled
+blacklisted-worlds:
+  - lobby
+  - prohub
+
+# Enabled structures per world type
+enabled-structures:
+  normal:
+    ancient_city: true
+    buried_treasure: true
+    desert_pyramid: true
+    igloo: true
+    jungle_pyramid: true
+    mansion: true
+    mineshaft: true
+    mineshaft_mesa: true
+    monument: true
+    ocean_ruin_cold: true
+    ocean_ruin_warm: true
+    pillager_outpost: true
+    ruined_portal: true
+    ruined_portal_desert: true
+    ruined_portal_jungle: true
+    ruined_portal_mountain: true
+    ruined_portal_ocean: true
+    ruined_portal_swamp: true
+    shipwreck: true
+    shipwreck_beached: true
+    stronghold: true
+    swamp_hut: true
+    trail_ruins: true
+    village_desert: true
+    village_plains: true
+    village_savanna: true
+    village_snowy: true
+    village_taiga: true
+    
+  nether:
+    bastion_remnant: true
+    fortress: true
+    nether_fossil: true
+    ruined_portal_nether: true
+    
+  the_end:
+    end_city: true
