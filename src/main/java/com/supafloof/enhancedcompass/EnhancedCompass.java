@@ -3,6 +3,7 @@ package com.supafloof.enhancedcompass;
 import net.kyori.adventure.bossbar.BossBar;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -222,6 +223,29 @@ public class EnhancedCompass extends JavaPlugin implements CommandExecutor, TabC
     }
     
     /**
+     * Sends help message with styled formatting
+     */
+    private void sendHelp(CommandSender sender) {
+        sender.sendMessage(Component.text("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━", NamedTextColor.GOLD));
+        sender.sendMessage(Component.text("Enhanced Compass Commands", NamedTextColor.GOLD, TextDecoration.BOLD));
+        sender.sendMessage(Component.text("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━", NamedTextColor.GOLD));
+        sender.sendMessage(Component.text("/enhancedcompass help", NamedTextColor.YELLOW)
+            .append(Component.text(" - Show this help menu", NamedTextColor.GRAY)));
+        sender.sendMessage(Component.text("/enhancedcompass <structure>", NamedTextColor.YELLOW)
+            .append(Component.text(" - Point compass to nearest structure", NamedTextColor.GRAY)));
+        sender.sendMessage(Component.text("/enhancedcompass current", NamedTextColor.YELLOW)
+            .append(Component.text(" - Show current compass target", NamedTextColor.GRAY)));
+        
+        // Only show reload command to console or players with reload permission
+        if (!(sender instanceof Player) || sender.hasPermission("enhancedcompass.reload")) {
+            sender.sendMessage(Component.text("/enhancedcompass reload", NamedTextColor.YELLOW)
+                .append(Component.text(" - Reload configuration", NamedTextColor.GRAY)));
+        }
+        
+        sender.sendMessage(Component.text("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━", NamedTextColor.GOLD));
+    }
+    
+    /**
      * Handles all /enhancedcompass commands
      * 
      * @param sender The command sender (player or console)
@@ -247,6 +271,12 @@ public class EnhancedCompass extends JavaPlugin implements CommandExecutor, TabC
             return true;
         }
         
+        // Handle help command
+        if (args.length > 0 && args[0].equalsIgnoreCase("help")) {
+            sendHelp(sender);
+            return true;
+        }
+        
         // All other commands require a player
         if (!(sender instanceof Player)) {
             sender.sendMessage(Component.text("This command can only be used by players (except /enhancedcompass reload).", NamedTextColor.RED));
@@ -267,9 +297,9 @@ public class EnhancedCompass extends JavaPlugin implements CommandExecutor, TabC
             return true;
         }
         
-        // Show usage if no arguments provided
+        // Show help if no arguments provided
         if (args.length == 0) {
-            player.sendMessage(Component.text("Usage: /enhancedcompass <structure|current|reload>", NamedTextColor.YELLOW));
+            sendHelp(player);
             return true;
         }
         
@@ -356,6 +386,9 @@ public class EnhancedCompass extends JavaPlugin implements CommandExecutor, TabC
         player.sendMessage(Component.text("Distance: ", NamedTextColor.GREEN)
             .append(Component.text(String.format("%.0f", distance) + " blocks", NamedTextColor.YELLOW)));
         
+        // Save the player's target
+        savePlayerTarget(player, target);
+        
         return true;
     }
     
@@ -375,8 +408,13 @@ public class EnhancedCompass extends JavaPlugin implements CommandExecutor, TabC
         // Tab complete first argument
         if (args.length == 1) {
             // Add subcommands
+            completions.add("help");
             completions.add("current");
-            completions.add("reload");
+            
+            // Only show reload to console or players with reload permission
+            if (!(sender instanceof Player) || sender.hasPermission("enhancedcompass.reload")) {
+                completions.add("reload");
+            }
             
             if (sender instanceof Player) {
                 // Add structure types enabled for player's current world
@@ -399,8 +437,8 @@ public class EnhancedCompass extends JavaPlugin implements CommandExecutor, TabC
     }
     
     /**
-     * Event handler for player disconnect
-     * Saves player's compass target and cleans up boss bar when they leave
+     * Called when a player disconnects
+     * Cleans up their boss bar
      * 
      * @param event The player quit event
      */
@@ -408,42 +446,24 @@ public class EnhancedCompass extends JavaPlugin implements CommandExecutor, TabC
     public void onPlayerQuit(PlayerQuitEvent event) {
         Player player = event.getPlayer();
         
-        // Save player's target before they leave
-        savePlayerTarget(player);
-        
-        // Remove player's boss bar
-        playerTargets.remove(player.getUniqueId());
+        // Remove boss bar
         removeBossBar(player);
-    }
-    
-    /**
-     * Event handler for player join
-     * Loads player's saved compass target when they join
-     * 
-     * @param event The player join event
-     */
-    @EventHandler
-    public void onPlayerJoin(org.bukkit.event.player.PlayerJoinEvent event) {
-        Player player = event.getPlayer();
         
-        // Load player's saved target
-        loadPlayerTarget(player);
+        // Save their target before they leave
+        CompassTarget target = playerTargets.get(player.getUniqueId());
+        if (target != null) {
+            savePlayerTarget(player, target);
+        }
     }
     
     /**
      * Saves a player's compass target to a file
      * 
      * @param player The player whose target to save
+     * @param target The compass target to save
      */
-    private void savePlayerTarget(Player player) {
-        CompassTarget target = playerTargets.get(player.getUniqueId());
-        
-        if (target == null) {
-            // No target to save, delete file if it exists
-            File playerFile = new File(playerDataFolder, player.getUniqueId().toString() + ".yml");
-            if (playerFile.exists()) {
-                playerFile.delete();
-            }
+    private void savePlayerTarget(Player player, CompassTarget target) {
+        if (target == null || target.location == null) {
             return;
         }
         
