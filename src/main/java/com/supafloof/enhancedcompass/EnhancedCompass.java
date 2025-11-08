@@ -35,6 +35,8 @@ import java.util.stream.Collectors;
  * Features:
  * - Permission-based access (enhancedcompass.use)
  * - All structure types supported (Overworld, Nether, End)
+ * - Generic "village" search - finds closest village of any type
+ * - Generic "anything" search - finds closest structure of any enabled type
  * - Configurable structure whitelist per dimension
  * - Configurable search radius
  * - World blacklist
@@ -333,6 +335,149 @@ public class EnhancedCompass extends JavaPlugin implements CommandExecutor, TabC
         // Handle structure search command
         String structureInput = args[0].toLowerCase();
         
+        // Handle special "village" search - searches all village types
+        if (structureInput.equals("village")) {
+            player.sendMessage(Component.text("Searching for nearest village of any type...", NamedTextColor.YELLOW));
+            
+            int searchRadius = configManager.getSearchRadius();
+            
+            // List of all village types
+            String[] villageTypes = {
+                "village_plains",
+                "village_desert", 
+                "village_savanna",
+                "village_snowy",
+                "village_taiga"
+            };
+            
+            Location closestLocation = null;
+            String closestVillageType = null;
+            double closestDistance = Double.MAX_VALUE;
+            
+            // Search for each village type and find the closest
+            for (String villageType : villageTypes) {
+                // Check if this village type is enabled
+                if (!configManager.isStructureEnabled(player.getWorld().getEnvironment(), villageType.toUpperCase())) {
+                    continue;
+                }
+                
+                org.bukkit.generator.structure.Structure structure = Registry.STRUCTURE.get(NamespacedKey.minecraft(villageType));
+                if (structure == null) {
+                    continue;
+                }
+                
+                var structureResult = player.getWorld().locateNearestStructure(
+                    player.getLocation(),
+                    structure,
+                    searchRadius,
+                    false
+                );
+                
+                if (structureResult != null) {
+                    Location loc = structureResult.getLocation();
+                    double distance = player.getLocation().distance(loc);
+                    
+                    if (distance < closestDistance) {
+                        closestDistance = distance;
+                        closestLocation = loc;
+                        closestVillageType = villageType.toUpperCase();
+                    }
+                }
+            }
+            
+            // Check if any village was found
+            if (closestLocation == null) {
+                player.sendMessage(Component.text("No villages found within " + (searchRadius * 16) + " blocks.", NamedTextColor.RED));
+                return true;
+            }
+            
+            // Set compass target to closest village
+            player.setCompassTarget(closestLocation);
+            
+            // Store the target for boss bar updates
+            CompassTarget target = new CompassTarget(closestVillageType, closestLocation);
+            playerTargets.put(player.getUniqueId(), target);
+            
+            // Display results
+            player.sendMessage(Component.text("Found " + formatStructureName(closestVillageType) + "!", NamedTextColor.GREEN));
+            player.sendMessage(Component.text("Compass now pointing to " + formatStructureName(closestVillageType) + "!", NamedTextColor.GREEN));
+            player.sendMessage(Component.text("Distance: ", NamedTextColor.GREEN)
+                .append(Component.text(String.format("%.0f", closestDistance) + " blocks", NamedTextColor.YELLOW)));
+            
+            // Save the player's target
+            savePlayerTarget(player, target);
+            
+            return true;
+        }
+        
+        // Handle special "anything" search - searches ALL enabled structure types
+        if (structureInput.equals("anything")) {
+            player.sendMessage(Component.text("Searching for nearest structure of any type...", NamedTextColor.YELLOW));
+            
+            int searchRadius = configManager.getSearchRadius();
+            World.Environment environment = player.getWorld().getEnvironment();
+            List<String> enabledStructures = configManager.getEnabledStructuresForEnvironment(environment);
+            
+            if (enabledStructures.isEmpty()) {
+                player.sendMessage(Component.text("No structures are enabled in this world type.", NamedTextColor.RED));
+                return true;
+            }
+            
+            Location closestLocation = null;
+            String closestStructureType = null;
+            double closestDistance = Double.MAX_VALUE;
+            
+            // Search for each enabled structure type and find the closest
+            for (String structureType : enabledStructures) {
+                org.bukkit.generator.structure.Structure structure = Registry.STRUCTURE.get(NamespacedKey.minecraft(structureType.toLowerCase()));
+                if (structure == null) {
+                    continue;
+                }
+                
+                var structureResult = player.getWorld().locateNearestStructure(
+                    player.getLocation(),
+                    structure,
+                    searchRadius,
+                    false
+                );
+                
+                if (structureResult != null) {
+                    Location loc = structureResult.getLocation();
+                    double distance = player.getLocation().distance(loc);
+                    
+                    if (distance < closestDistance) {
+                        closestDistance = distance;
+                        closestLocation = loc;
+                        closestStructureType = structureType;
+                    }
+                }
+            }
+            
+            // Check if any structure was found
+            if (closestLocation == null) {
+                player.sendMessage(Component.text("No structures found within " + (searchRadius * 16) + " blocks.", NamedTextColor.RED));
+                return true;
+            }
+            
+            // Set compass target to closest structure
+            player.setCompassTarget(closestLocation);
+            
+            // Store the target for boss bar updates
+            CompassTarget target = new CompassTarget(closestStructureType, closestLocation);
+            playerTargets.put(player.getUniqueId(), target);
+            
+            // Display results
+            player.sendMessage(Component.text("Found " + formatStructureName(closestStructureType) + "!", NamedTextColor.GREEN));
+            player.sendMessage(Component.text("Compass now pointing to " + formatStructureName(closestStructureType) + "!", NamedTextColor.GREEN));
+            player.sendMessage(Component.text("Distance: ", NamedTextColor.GREEN)
+                .append(Component.text(String.format("%.0f", closestDistance) + " blocks", NamedTextColor.YELLOW)));
+            
+            // Save the player's target
+            savePlayerTarget(player, target);
+            
+            return true;
+        }
+        
         // Check if structure type is enabled in config for current world type
         if (!configManager.isStructureEnabled(player.getWorld().getEnvironment(), structureInput.toUpperCase())) {
             player.sendMessage(Component.text("This structure type is not enabled in the current world type.", NamedTextColor.RED));
@@ -410,6 +555,10 @@ public class EnhancedCompass extends JavaPlugin implements CommandExecutor, TabC
             // Add subcommands
             completions.add("help");
             completions.add("current");
+            
+            // Add special generic structure searches
+            completions.add("village");
+            completions.add("anything");
             
             // Only show reload to console or players with reload permission
             if (!(sender instanceof Player) || sender.hasPermission("enhancedcompass.reload")) {
