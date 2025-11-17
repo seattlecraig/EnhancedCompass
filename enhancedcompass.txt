@@ -1,0 +1,255 @@
+=====================================
+ENHANCED COMPASS GUIDE 
+=====================================
+A player's guide to the /enhancedcompass command
+
+By SupaFloof Games
+=====================================
+PAGE 1
+=====================================
+WHAT IS THIS?
+
+EnhancedCompass lets you point your compass to any structure in Minecraft.
+
+When you hold a compass, a boss bar appears showing the structure name and distance.
+=====================================
+PAGE 2
+=====================================
+BASIC USAGE
+
+1. Get a compass
+2. Run a search command
+3. Hold the compass
+4. A boss bar appears at the top of your screen
+5. Follow the compass!
+=====================================
+PAGE 3
+=====================================
+MAIN COMMANDS
+
+/enhancedcompass help
+Shows command help
+
+/enhancedcompass <structure>
+Points compass to that structure
+
+/enhancedcompass current
+Shows your current target
+=====================================
+PAGE 4
+=====================================
+SPECIAL SEARCHES
+
+/enhancedcompass village
+Finds the nearest village of ANY type (plains, desert, snowy, etc.)
+
+/enhancedcompass anything
+Finds the nearest structure of ANY type
+=====================================
+PAGE 5
+=====================================
+EXAMPLE STRUCTURES
+
+Overworld:
+ancient_city
+stronghold
+village_plains
+village_desert
+mansion
+monument
+temple_desert
+jungle_pyramid
+mineshaft
+shipwreck
+=====================================
+PAGE 6
+=====================================
+EXAMPLE STRUCTURES
+
+Nether:
+fortress
+bastion_remnant
+
+End:
+end_city
+
+Use tab completion to see all available structures!
+=====================================
+PAGE 7
+=====================================
+BOSS BAR COLORS
+
+Aqua structure name + Yellow distance:
+Target is in your dimension
+
+Red structure name + Red warning:
+Target is in a different dimension
+=====================================
+PAGE 8
+=====================================
+BOSS BAR BEHAVIOR
+
+- Appears when you hold a compass (main or off hand)
+- Updates every half second
+- Disappears when you put the compass away
+- Shows real-time distance in blocks
+=====================================
+PAGE 9
+=====================================
+FINDING A VILLAGE
+
+Command:
+/enhancedcompass village
+
+Result:
+"Found Village Plains!"
+"Distance: 892 blocks"
+
+Boss bar appears:
+Village Plains - 892 blocks
+=====================================
+PAGE 10
+=====================================
+FINDING ANCIENT CITY
+
+Command:
+/enhancedcompass ancient_city
+
+Result:
+"Compass now pointing to Ancient City!"
+"Distance: 2,134 blocks"
+
+Follow compass, dig down when close!
+=====================================
+PAGE 11
+=====================================
+USING "ANYTHING"
+
+Command:
+/enhancedcompass anything
+
+Finds whatever structure is closest to you.
+
+Good for random exploration!
+=====================================
+PAGE 12
+=====================================
+CHECKING YOUR TARGET
+
+Command:
+/enhancedcompass current
+
+Shows:
+"Current target: Stronghold"
+"Distance: 3,421 blocks"
+
+Useful if you forget what you're searching for.
+=====================================
+PAGE 13
+=====================================
+TAB COMPLETION
+
+Start typing a command and press TAB.
+
+Example:
+/enhancedcompass anc[TAB]
+
+Completes to:
+/enhancedcompass ancient_city
+
+Works for all structure names!
+=====================================
+PAGE 14
+=====================================
+PERSISTENT TARGETS
+
+Your compass target is saved automatically.
+
+It stays set even if you:
+- Log out
+- Die
+- Server restarts
+
+To change target, just search for a new structure.
+=====================================
+PAGE 15
+=====================================
+DISTANCE EXPLAINED
+
+Distance is "as the crow flies" - a straight line from you to the structure.
+
+Includes height (Y-level).
+
+Actual walking distance may be longer due to terrain.
+=====================================
+PAGE 16
+=====================================
+CROSS-DIMENSION
+
+If you set a target in the Overworld, then go to the Nether:
+
+Boss bar shows:
+"End City - Not in same dimension"
+
+Return to the correct dimension to see the real distance.
+=====================================
+PAGE 17
+=====================================
+STRUCTURE SEARCH
+
+When you run a search command, the plugin:
+
+1. Searches the world
+2. Finds the nearest match
+3. Points your compass to it
+4. Shows you the distance
+=====================================
+PAGE 18
+=====================================
+PERMISSION REQUIRED
+
+You need the permission:
+enhancedcompass.use
+
+If you see "You don't have permission" ask your server admin.
+=====================================
+PAGE 19
+=====================================
+QUICK REFERENCE
+
+/enhancedcompass village
+Find any village
+
+/enhancedcompass anything
+Find any structure
+
+/enhancedcompass <name>
+Find specific structure
+
+/enhancedcompass current
+Check target
+=====================================
+PAGE 20
+=====================================
+TIPS
+
+1. Use tab completion to explore available structures
+
+2. Try "anything" for random exploration
+
+3. The compass always points to your target
+
+4. Hold compass to see boss bar
+
+5. Distance updates in real-time
+=====================================
+PAGE 21
+=====================================
+That's it!
+
+You now know how to use EnhancedCompass.
+
+Happy exploring!
+
+- SupaFloof Games
+=====================================
