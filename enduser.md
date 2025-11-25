@@ -8,6 +8,10 @@ Even better, when you hold your compass, a **boss bar** appears at the top of yo
 
 ---
 
+## How to Activate The /enchancedcompass (or /ecompass) Command
+
+It is a perk onlocked by buying and using a Perk Key at https://pixels.supafloof.com
+
 ## Features at a Glance
 
 ✨ **Point to Any Structure**: Find villages, temples, strongholds, ancient cities, and more  
@@ -212,13 +216,6 @@ Make sure you're:
 2. Have set a target with a search command
 3. Have the `enhancedcompass.use` permission
 
----
-
-## Permission Reference
-
-Standard players typically need:
-
-- `enhancedcompass.use` - Required to use all compass features
 
 ---
 
@@ -263,7 +260,7 @@ A: No, you can only have one target at a time. Setting a new target replaces the
 A: No! The compass is never consumed. You can use any compass, even an enchanted one.
 
 **Q: Will this help me find buried treasure?**  
-A: Yes! Try `/enhancedcompass buried_treasure` (if enabled on your server).
+A: Yes! Try `/enhancedcompass buried_treasure` 
 
 **Q: What if I can't find the structure when I get there?**  
 A: Some structures generate underground or underwater. The compass points to the structure center, but you may need to explore the area.
@@ -295,3 +292,7 @@ Press TAB while typing for auto-completion!
 - Make sure you have the correct permissions
 
 Happy exploring! 🧭
+
+---
+
+**Made with ❤️ by SupaFloof Games, LLC**
