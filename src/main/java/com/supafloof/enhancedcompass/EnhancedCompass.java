@@ -10,6 +10,7 @@ import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.Registry;
 import org.bukkit.World;
+import org.bukkit.block.Biome;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
@@ -30,20 +31,23 @@ import java.util.stream.Collectors;
  * EnhancedCompass Plugin
  * 
  * A sophisticated Minecraft Paper/Spigot plugin that enhances the vanilla compass functionality
- * by allowing players to point their compass to any structure type in the game and see real-time
+ * by allowing players to point their compass to any structure type or biome in the game and see real-time
  * distance updates via a boss bar while holding the compass.
  * 
  * <p><b>Core Features:</b></p>
  * <ul>
  *   <li>Permission-based access control (enhancedcompass.use)</li>
  *   <li>Support for all structure types across all dimensions (Overworld, Nether, End)</li>
+ *   <li>Support for all biome types across all dimensions</li>
  *   <li>Generic "village" search - finds closest village of any type (plains, desert, snowy, etc.)</li>
  *   <li>Generic "anything" search - finds closest structure of any enabled type</li>
  *   <li>Configurable structure whitelist per dimension for granular control</li>
+ *   <li>Configurable biome whitelist per dimension for granular control</li>
  *   <li>Configurable search radius (in chunks)</li>
  *   <li>World blacklist to disable plugin in specific worlds</li>
  *   <li>Real-time boss bar distance display (updates every 0.5 seconds)</li>
  *   <li>Complete tab completion for all commands and structure types</li>
+ *   <li>Complete tab completion for all biome types</li>
  *   <li>Player data persistence - targets saved between sessions</li>
  *   <li>Hot-reload capability for configuration changes</li>
  * </ul>
@@ -52,6 +56,7 @@ import java.util.stream.Collectors;
  * <ul>
  *   <li>Uses Adventure API for modern text components and boss bars</li>
  *   <li>Uses Bukkit Registry API for accurate structure lookups</li>
+ *   <li>Uses Bukkit Registry API for accurate biome lookups</li>
  *   <li>Asynchronous boss bar updates via scheduled tasks</li>
  *   <li>YAML-based player data persistence</li>
  *   <li>Modular design with inner classes for organization</li>
@@ -61,21 +66,22 @@ import java.util.stream.Collectors;
  * <ul>
  *   <li>Structure lookups use the Structure object directly (not StructureType) to ensure 
  *       accurate results, as many different structures share the same StructureType (e.g., "jigsaw")</li>
+ *   <li>Biome lookups use World.locateNearestBiome() for efficient biome searching</li>
  *   <li>Boss bars only appear when players are actively holding a compass (main or off hand)</li>
  *   <li>Distance calculations are 3D Euclidean distance in blocks</li>
  *   <li>Cross-dimension targets show "Not in same dimension" warning in boss bar</li>
  * </ul>
  * 
  * @author SupaFloof Games, LLC
- * @version 1.0.0
+ * @version 1.1.0
  */
 public class EnhancedCompass extends JavaPlugin implements CommandExecutor, TabCompleter, Listener {
     
     /**
      * Maps each player's UUID to their current compass target.
-     * This stores both the structure type name and the exact location coordinates.
+     * This stores both the target type name (structure or biome) and the exact location coordinates.
      * Key: Player UUID
-     * Value: CompassTarget object containing structure type and location
+     * Value: CompassTarget object containing target type and location
      */
     private Map<UUID, CompassTarget> playerTargets = new HashMap<>();
     
@@ -90,7 +96,7 @@ public class EnhancedCompass extends JavaPlugin implements CommandExecutor, TabC
     
     /**
      * Configuration manager instance that handles all config.yml operations.
-     * Provides methods to check enabled structures, search radius, and world blacklists.
+     * Provides methods to check enabled structures, enabled biomes, search radius, and world blacklists.
      * Initialized in onEnable() and recreated on reload.
      */
     private ConfigManager configManager;
@@ -107,7 +113,7 @@ public class EnhancedCompass extends JavaPlugin implements CommandExecutor, TabC
      * Directory where individual player data files are stored.
      * Each player gets a UUID.yml file containing their last compass target.
      * Location: plugins/EnhancedCompass/playerdata/
-     * File format: UUID.yml containing structure-type, world, x, y, z
+     * File format: UUID.yml containing target-type, target-name, world, x, y, z
      */
     private File playerDataFolder;
     
@@ -136,7 +142,7 @@ public class EnhancedCompass extends JavaPlugin implements CommandExecutor, TabC
         saveDefaultConfig();
         
         // Initialize the configuration manager which will parse and validate config.yml
-        // ConfigManager handles structure whitelists, search radius, and world blacklists
+        // ConfigManager handles structure whitelists, biome whitelists, search radius, and world blacklists
         configManager = new ConfigManager(this);
         
         // Create the playerdata directory if it doesn't exist
@@ -151,7 +157,7 @@ public class EnhancedCompass extends JavaPlugin implements CommandExecutor, TabC
         getCommand("enhancedcompass").setExecutor(this);
         
         // Register this class as the tab completer for /enhancedcompass
-        // Provides auto-completion for structure names and subcommands
+        // Provides auto-completion for structure names, biome names, and subcommands
         getCommand("enhancedcompass").setTabCompleter(this);
         
         // Register this class as an event listener
@@ -309,7 +315,7 @@ public class EnhancedCompass extends JavaPlugin implements CommandExecutor, TabC
      * </ul>
      * 
      * @param player The player to show/update the boss bar for
-     * @param target The compass target containing structure type and location
+     * @param target The compass target containing target type/name and location
      */
     private void updateBossBar(Player player, CompassTarget target) {
         // Attempt to retrieve existing boss bar for this player
@@ -340,12 +346,12 @@ public class EnhancedCompass extends JavaPlugin implements CommandExecutor, TabC
             // Uses Bukkit's Location.distance() which calculates: sqrt((x2-x1)² + (y2-y1)² + (z2-z1)²)
             double distance = player.getLocation().distance(target.location);
             
-            // Format structure name from UPPER_CASE to Title Case
-            String structureName = formatStructureName(target.structureType);
+            // Format target name from UPPER_CASE to Title Case
+            String targetName = formatStructureName(target.structureType);
             
             // Build boss bar title with colored components:
-            // [Aqua Structure Name] - [Yellow distance blocks]
-            Component title = Component.text(structureName, NamedTextColor.AQUA)
+            // [Aqua Target Name] - [Yellow distance blocks]
+            Component title = Component.text(targetName, NamedTextColor.AQUA)
                 .append(Component.text(" - ", NamedTextColor.GRAY))
                 .append(Component.text(String.format("%.0f", distance) + " blocks", NamedTextColor.YELLOW));
             
@@ -357,12 +363,12 @@ public class EnhancedCompass extends JavaPlugin implements CommandExecutor, TabC
         } else {
             // Different dimension - show warning message
             
-            // Format structure name from UPPER_CASE to Title Case
-            String structureName = formatStructureName(target.structureType);
+            // Format target name from UPPER_CASE to Title Case
+            String targetName = formatStructureName(target.structureType);
             
             // Build boss bar title with red colors to indicate issue:
-            // [Red Structure Name] - [Red "Not in same dimension"]
-            Component title = Component.text(structureName, NamedTextColor.RED)
+            // [Red Target Name] - [Red "Not in same dimension"]
+            Component title = Component.text(targetName, NamedTextColor.RED)
                 .append(Component.text(" - ", NamedTextColor.GRAY))
                 .append(Component.text("Not in same dimension", NamedTextColor.RED));
             
@@ -407,7 +413,7 @@ public class EnhancedCompass extends JavaPlugin implements CommandExecutor, TabC
     }
     
     /**
-     * Formats a structure type name for display to players.
+     * Formats a structure or biome type name for display to players.
      * Converts internal UPPER_CASE_WITH_UNDERSCORES format to readable Title Case format.
      * 
      * <p><b>Conversion Examples:</b></p>
@@ -416,6 +422,8 @@ public class EnhancedCompass extends JavaPlugin implements CommandExecutor, TabC
      *   <li>VILLAGE_PLAINS → "Village Plains"</li>
      *   <li>STRONGHOLD → "Stronghold"</li>
      *   <li>END_CITY → "End City"</li>
+     *   <li>DARK_FOREST → "Dark Forest"</li>
+     *   <li>CHERRY_GROVE → "Cherry Grove"</li>
      * </ul>
      * 
      * <p><b>Algorithm:</b></p>
@@ -426,10 +434,10 @@ public class EnhancedCompass extends JavaPlugin implements CommandExecutor, TabC
      * </ol>
      * 
      * <p><b>Performance:</b> This method is called frequently (every boss bar update),
-     * but String operations are relatively fast for short structure names.</p>
+     * but String operations are relatively fast for short names.</p>
      * 
-     * @param structureType The structure type in UPPER_CASE format (e.g., "ANCIENT_CITY")
-     * @return Formatted structure name with proper capitalization (e.g., "Ancient City")
+     * @param structureType The structure or biome type in UPPER_CASE format (e.g., "ANCIENT_CITY", "DARK_FOREST")
+     * @return Formatted name with proper capitalization (e.g., "Ancient City", "Dark Forest")
      */
     private String formatStructureName(String structureType) {
         // Split on underscores to get individual words
@@ -462,6 +470,7 @@ public class EnhancedCompass extends JavaPlugin implements CommandExecutor, TabC
      * <ul>
      *   <li>/enhancedcompass help - Show help menu</li>
      *   <li>/enhancedcompass &lt;structure&gt; - Point compass to structure</li>
+     *   <li>/enhancedcompass biome &lt;biome&gt; - Point compass to biome</li>
      *   <li>/enhancedcompass current - Show current target</li>
      *   <li>/enhancedcompass reload - Reload config (only shown to authorized users)</li>
      * </ul>
@@ -498,6 +507,10 @@ public class EnhancedCompass extends JavaPlugin implements CommandExecutor, TabC
         sender.sendMessage(Component.text("/enhancedcompass <structure>", NamedTextColor.YELLOW)
             .append(Component.text(" - Point compass to nearest structure", NamedTextColor.GRAY)));
         
+        // Biome search command - biome location functionality
+        sender.sendMessage(Component.text("/enhancedcompass biome <biome>", NamedTextColor.YELLOW)
+            .append(Component.text(" - Point compass to nearest biome", NamedTextColor.GRAY)));
+        
         // Current command - shows active target
         sender.sendMessage(Component.text("/enhancedcompass current", NamedTextColor.YELLOW)
             .append(Component.text(" - Show current compass target", NamedTextColor.GRAY)));
@@ -525,6 +538,7 @@ public class EnhancedCompass extends JavaPlugin implements CommandExecutor, TabC
      *   <li>/enhancedcompass current - Shows current compass target</li>
      *   <li>/enhancedcompass village - Finds nearest village of any type</li>
      *   <li>/enhancedcompass anything - Finds nearest structure of any enabled type</li>
+     *   <li>/enhancedcompass biome &lt;biome&gt; - Finds nearest specific biome</li>
      *   <li>/enhancedcompass &lt;structure&gt; - Finds nearest specific structure</li>
      * </ul>
      * 
@@ -536,7 +550,7 @@ public class EnhancedCompass extends JavaPlugin implements CommandExecutor, TabC
      *   <li>Verify player has enhancedcompass.use permission</li>
      *   <li>Verify world is not blacklisted</li>
      *   <li>Show help if no arguments provided</li>
-     *   <li>Handle current/village/anything/structure commands</li>
+     *   <li>Handle current/village/anything/biome/structure commands</li>
      * </ol>
      * 
      * <p><b>Structure Search Process:</b></p>
@@ -665,6 +679,122 @@ public class EnhancedCompass extends JavaPlugin implements CommandExecutor, TabC
         
         // Convert structure input to lowercase for case-insensitive matching
         String structureInput = args[0].toLowerCase();
+        
+        // BIOME COMMAND - searches for a specific biome type
+        // Usage: /enhancedcompass biome <biome_name>
+        if (structureInput.equals("biome")) {
+            // Check if biome name was provided
+            if (args.length < 2) {
+                player.sendMessage(Component.text("Usage: /enhancedcompass biome <biome_name>", NamedTextColor.RED));
+                player.sendMessage(Component.text("Use tab completion to see available biomes.", NamedTextColor.YELLOW));
+                return true;
+            }
+            
+            // Get biome input from second argument
+            String biomeInput = args[1].toLowerCase();
+            
+            // Check if biome type is enabled in config for current world type
+            // Prevents searching for biomes that are disabled or don't exist in this dimension
+            if (!configManager.isBiomeEnabled(player.getWorld().getEnvironment(), biomeInput.toUpperCase())) {
+                player.sendMessage(Component.text("This biome type is not enabled in the current world type.", NamedTextColor.RED));
+                return true;
+            }
+            
+            // Get biome from Bukkit's Registry using Minecraft namespaced key
+            // This uses the Biome object directly for accurate lookups
+            Biome biome = Registry.BIOME.get(NamespacedKey.minecraft(biomeInput));
+            
+            // Validate that biome exists in the registry
+            if (biome == null) {
+                player.sendMessage(Component.text("Invalid biome type: " + biomeInput, NamedTextColor.RED));
+                player.sendMessage(Component.text("Use tab completion to see available biomes.", NamedTextColor.YELLOW));
+                return true;
+            }
+            
+            // Notify player that search is starting (can take a moment for large search radius)
+            player.sendMessage(Component.text("Searching for nearest " + formatStructureName(biomeInput) + " biome...", NamedTextColor.YELLOW));
+            
+            // Get configured search radius from config (in chunks, not blocks)
+            int searchRadius = configManager.getSearchRadius();
+            
+            // Store final variables for use in async callback
+            final String finalBiomeInput = biomeInput.toUpperCase();
+            final World world = player.getWorld();
+            final Location playerLoc = player.getLocation().clone();
+            final UUID playerUUID = player.getUniqueId();
+            
+            // Run biome search asynchronously to prevent server lag
+            // Biome searches are computationally expensive as they require noise calculations
+            // Using BukkitRunnable to run the search off the main thread
+            new BukkitRunnable() {
+                @Override
+                public void run() {
+                    // Search for the nearest biome using Bukkit's biome location API
+                    // Parameters:
+                    //   - origin: Starting location for search (player's saved location)
+                    //   - biome: The specific Biome object to search for
+                    //   - radius: Search radius in BLOCKS (converted from chunks)
+                    //   - step: Search step size of 32 blocks (matches vanilla /locate biome command)
+                    //           Vanilla uses 32 horizontal / 64 vertical resolution
+                    //           Using 32 provides good balance of speed and accuracy
+                    //
+                    // Returns: Location of nearest biome, or null if not found within radius
+                    Location biomeResult = world.locateNearestBiome(
+                        playerLoc,
+                        biome,
+                        searchRadius * 16,  // Convert chunks to blocks
+                        32  // Step size of 32 blocks - matches vanilla /locate biome resolution
+                    );
+                    
+                    // Switch back to main thread to update player state and send messages
+                    // Bukkit API calls must be made on the main thread
+                    new BukkitRunnable() {
+                        @Override
+                        public void run() {
+                            // Verify player is still online before sending messages
+                            Player onlinePlayer = Bukkit.getPlayer(playerUUID);
+                            if (onlinePlayer == null) {
+                                return;  // Player disconnected during search
+                            }
+                            
+                            // Check if biome was found within search radius
+                            if (biomeResult == null) {
+                                // Not found - inform player with search radius in blocks
+                                onlinePlayer.sendMessage(Component.text("No " + formatStructureName(finalBiomeInput) + 
+                                                 " biome found within " + (searchRadius * 16) + " blocks.", NamedTextColor.RED));
+                                return;
+                            }
+                            
+                            // Set vanilla compass target to the biome location
+                            // This makes the compass needle point towards the biome
+                            onlinePlayer.setCompassTarget(biomeResult);
+                            
+                            // Store the target for boss bar updates
+                            // This allows the update task to show real-time distance in boss bar
+                            CompassTarget target = new CompassTarget(finalBiomeInput, biomeResult);
+                            playerTargets.put(playerUUID, target);
+                            
+                            // Calculate initial distance for display
+                            // This is a 3D Euclidean distance in blocks
+                            double distance = onlinePlayer.getLocation().distance(biomeResult);
+                            
+                            // Send success message with biome name in formatted Title Case
+                            onlinePlayer.sendMessage(Component.text("Compass now pointing to " + formatStructureName(finalBiomeInput) + " biome!", NamedTextColor.GREEN));
+                            
+                            // Send distance message with formatted block count
+                            // String.format("%.0f", distance) rounds to nearest whole number
+                            onlinePlayer.sendMessage(Component.text("Distance: ", NamedTextColor.GREEN)
+                                .append(Component.text(String.format("%.0f", distance) + " blocks", NamedTextColor.YELLOW)));
+                            
+                            // Save the player's target to disk for persistence across server restarts
+                            savePlayerTarget(onlinePlayer, target);
+                        }
+                    }.runTask(EnhancedCompass.this);  // Run on main thread
+                }
+            }.runTaskAsynchronously(EnhancedCompass.this);  // Run search off main thread
+            
+            return true;
+        }
         
         // VILLAGE COMMAND - special handler that searches ALL village types
         // This is more convenient than typing a specific village type
@@ -940,9 +1070,10 @@ public class EnhancedCompass extends JavaPlugin implements CommandExecutor, TabC
      * <p><b>Tab Completion Behavior:</b></p>
      * <ul>
      *   <li>First argument: subcommands and structure names</li>
+     *   <li>Second argument (for biome): biome names</li>
      *   <li>Filters suggestions based on what player has typed</li>
      *   <li>Results are sorted alphabetically</li>
-     *   <li>Console gets all structure types, players get only enabled types for their world</li>
+     *   <li>Console gets all types, players get only enabled types for their world</li>
      *   <li>Reload command only shown to authorized users</li>
      * </ul>
      * 
@@ -950,6 +1081,7 @@ public class EnhancedCompass extends JavaPlugin implements CommandExecutor, TabC
      * <ul>
      *   <li>help - Always shown</li>
      *   <li>current - Always shown</li>
+     *   <li>biome - Always shown (biome search subcommand)</li>
      *   <li>village - Always shown (generic village search)</li>
      *   <li>anything - Always shown (generic structure search)</li>
      *   <li>reload - Only shown to console or players with enhancedcompass.reload</li>
@@ -960,6 +1092,13 @@ public class EnhancedCompass extends JavaPlugin implements CommandExecutor, TabC
      *   <li>Players: Only structures enabled for their current world's dimension</li>
      *   <li>Console: All structure types from Bukkit Registry</li>
      *   <li>Lowercase format (e.g., "ancient_city", "village_plains")</li>
+     * </ul>
+     * 
+     * <p><b>Biome Names (when first arg is "biome"):</b></p>
+     * <ul>
+     *   <li>Players: Only biomes enabled for their current world's dimension</li>
+     *   <li>Console: All biome types from Bukkit Registry</li>
+     *   <li>Lowercase format (e.g., "dark_forest", "cherry_grove")</li>
      * </ul>
      * 
      * <p><b>Performance Considerations:</b></p>
@@ -983,6 +1122,7 @@ public class EnhancedCompass extends JavaPlugin implements CommandExecutor, TabC
             // Add standard subcommands that are always available
             completions.add("help");      // Shows help menu
             completions.add("current");   // Shows current target
+            completions.add("biome");     // Biome search subcommand
             
             // Add special generic structure searches
             completions.add("village");   // Finds any village type
@@ -1026,8 +1166,43 @@ public class EnhancedCompass extends JavaPlugin implements CommandExecutor, TabC
                 .collect(Collectors.toList());  // Collect to list
         }
         
-        // Return empty list for arguments beyond the first
-        // We don't have any multi-argument commands that need completion
+        // SECOND ARGUMENT TAB COMPLETION - only for "biome" subcommand
+        // Provides biome name suggestions when first argument is "biome"
+        if (args.length == 2 && args[0].equalsIgnoreCase("biome")) {
+            // Add biome type completions based on sender type
+            if (sender instanceof Player) {
+                // PLAYER: Add only biome types enabled for their current world
+                // This prevents suggesting biomes that won't work in their dimension
+                Player player = (Player) sender;
+                
+                // Get enabled biomes for player's current world environment
+                List<String> enabledBiomes = configManager.getEnabledBiomesForEnvironment(player.getWorld().getEnvironment());
+                
+                // Convert to lowercase and add to completions
+                // Config stores in UPPER_CASE but commands use lowercase
+                completions.addAll(enabledBiomes.stream()
+                    .map(String::toLowerCase)
+                    .collect(Collectors.toList()));
+            } else {
+                // CONSOLE: Add all available biome types from Bukkit Registry
+                // Console doesn't have a specific world, so show everything
+                Registry.BIOME.forEach(biome -> {
+                    // Get the namespaced key and extract the biome name
+                    // e.g., "minecraft:dark_forest" → "dark_forest"
+                    completions.add(biome.getKey().getKey());
+                });
+            }
+            
+            // Filter completions based on what user has typed so far
+            // Example: if they typed "dar", only show completions starting with "dar"
+            return completions.stream()
+                .filter(s -> s.toLowerCase().startsWith(args[1].toLowerCase()))  // Case-insensitive match
+                .sorted()  // Alphabetically sort for easier reading
+                .collect(Collectors.toList());  // Collect to list
+        }
+        
+        // Return empty list for arguments beyond the first (or second for biome)
+        // We don't have any multi-argument commands that need completion beyond this
         return completions;
     }
     
@@ -1396,6 +1571,29 @@ public class EnhancedCompass extends JavaPlugin implements CommandExecutor, TabC
         private Map<String, Map<String, Boolean>> enabledStructures;
         
         /**
+         * Nested map of enabled biomes per dimension.
+         * Structure: Map<Environment String, Map<Biome Type, Enabled Boolean>>
+         * 
+         * Example structure:
+         * {
+         *   "NORMAL": {
+         *     "DARK_FOREST": true,
+         *     "CHERRY_GROVE": true,
+         *     "DESERT": false
+         *   },
+         *   "NETHER": {
+         *     "CRIMSON_FOREST": true,
+         *     "WARPED_FOREST": true
+         *   }
+         * }
+         * 
+         * Outer map keys: "NORMAL", "NETHER", "THE_END"
+         * Inner map keys: Biome types in UPPER_CASE
+         * Inner map values: true = enabled, false = disabled
+         */
+        private Map<String, Map<String, Boolean>> enabledBiomes;
+        
+        /**
          * Constructor that initializes the ConfigManager and loads configuration.
          * 
          * @param plugin Reference to main plugin instance
@@ -1496,6 +1694,55 @@ public class EnhancedCompass extends JavaPlugin implements CommandExecutor, TabC
             }
             // Store end structures map with "THE_END" key
             enabledStructures.put("THE_END", endStructures);
+            
+            // Initialize enabled biomes map
+            enabledBiomes = new HashMap<>();
+            
+            // LOAD OVERWORLD (NORMAL) BIOMES
+            // Create map for normal dimension biomes
+            Map<String, Boolean> normalBiomes = new HashMap<>();
+            
+            // Check if config section exists
+            if (config.contains("enabled-biomes.normal")) {
+                // Iterate through all keys in normal section
+                for (String key : config.getConfigurationSection("enabled-biomes.normal").getKeys(false)) {
+                    // Store as UPPER_CASE for consistency
+                    // Value is boolean (true = enabled, false = disabled)
+                    normalBiomes.put(key.toUpperCase(), config.getBoolean("enabled-biomes.normal." + key));
+                }
+            }
+            // Store normal biomes map with "NORMAL" key
+            enabledBiomes.put("NORMAL", normalBiomes);
+            
+            // LOAD NETHER BIOMES
+            // Create map for nether dimension biomes
+            Map<String, Boolean> netherBiomes = new HashMap<>();
+            
+            // Check if config section exists
+            if (config.contains("enabled-biomes.nether")) {
+                // Iterate through all keys in nether section
+                for (String key : config.getConfigurationSection("enabled-biomes.nether").getKeys(false)) {
+                    // Store as UPPER_CASE for consistency
+                    netherBiomes.put(key.toUpperCase(), config.getBoolean("enabled-biomes.nether." + key));
+                }
+            }
+            // Store nether biomes map with "NETHER" key
+            enabledBiomes.put("NETHER", netherBiomes);
+            
+            // LOAD END BIOMES
+            // Create map for end dimension biomes
+            Map<String, Boolean> endBiomes = new HashMap<>();
+            
+            // Check if config section exists
+            if (config.contains("enabled-biomes.the_end")) {
+                // Iterate through all keys in the_end section
+                for (String key : config.getConfigurationSection("enabled-biomes.the_end").getKeys(false)) {
+                    // Store as UPPER_CASE for consistency
+                    endBiomes.put(key.toUpperCase(), config.getBoolean("enabled-biomes.the_end." + key));
+                }
+            }
+            // Store end biomes map with "THE_END" key
+            enabledBiomes.put("THE_END", endBiomes);
         }
         
         /**
@@ -1620,6 +1867,96 @@ public class EnhancedCompass extends JavaPlugin implements CommandExecutor, TabC
                 // Iterate through all structure entries for this environment
                 for (Map.Entry<String, Boolean> entry : structures.entrySet()) {
                     // Only add structures that are explicitly enabled (value = true)
+                    if (entry.getValue()) {
+                        result.add(entry.getKey());
+                    }
+                }
+            }
+            
+            return result;
+        }
+        
+        /**
+         * Checks if a biome type is enabled for a specific world environment.
+         * This is the main permission check for biome searches.
+         * 
+         * <p><b>Usage:</b></p>
+         * Called before every biome search to verify the biome is
+         * allowed in the current dimension.
+         * 
+         * <p><b>Return Values:</b></p>
+         * <ul>
+         *   <li>true: Biome is explicitly enabled in config</li>
+         *   <li>false: Biome is disabled, not in config, or environment not configured</li>
+         * </ul>
+         * 
+         * <p><b>Environment Mapping:</b></p>
+         * <ul>
+         *   <li>World.Environment.NORMAL → "NORMAL" section</li>
+         *   <li>World.Environment.NETHER → "NETHER" section</li>
+         *   <li>World.Environment.THE_END → "THE_END" section</li>
+         * </ul>
+         * 
+         * @param environment The world environment (NORMAL, NETHER, THE_END)
+         * @param biomeType The biome type in UPPER_CASE format (e.g., "DARK_FOREST")
+         * @return true if biome is enabled for this environment, false otherwise
+         */
+        boolean isBiomeEnabled(World.Environment environment, String biomeType) {
+            // Convert environment enum to string key
+            // NORMAL → "NORMAL", NETHER → "NETHER", THE_END → "THE_END"
+            String envKey = environment.toString();
+            
+            // Get the biomes map for this environment
+            Map<String, Boolean> biomes = enabledBiomes.get(envKey);
+            
+            // Return false if environment section doesn't exist in config
+            if (biomes == null) {
+                return false;
+            }
+            
+            // Get enabled status for this biome type
+            // Returns false if biome not present in config (disabled by default)
+            return biomes.getOrDefault(biomeType, false);
+        }
+        
+        /**
+         * Gets all enabled biome types for a specific world environment.
+         * Used for tab completion.
+         * 
+         * <p><b>Usage:</b></p>
+         * <ul>
+         *   <li>Tab completion: Show only available biomes for player's dimension</li>
+         * </ul>
+         * 
+         * <p><b>Return Format:</b></p>
+         * Returns a list of biome type strings in UPPER_CASE format.
+         * Example: ["DARK_FOREST", "CHERRY_GROVE", "MUSHROOM_FIELDS"]
+         * 
+         * <p><b>Empty List:</b></p>
+         * Returns empty list if:
+         * <ul>
+         *   <li>Environment not configured in config</li>
+         *   <li>All biomes disabled for this environment</li>
+         * </ul>
+         * 
+         * @param environment The world environment (NORMAL, NETHER, THE_END)
+         * @return List of enabled biome types in UPPER_CASE format (never null, may be empty)
+         */
+        List<String> getEnabledBiomesForEnvironment(World.Environment environment) {
+            // Convert environment enum to string key
+            String envKey = environment.toString();
+            
+            // Get the biomes map for this environment
+            Map<String, Boolean> biomes = enabledBiomes.get(envKey);
+            
+            // Create result list
+            List<String> result = new ArrayList<>();
+            
+            // Only process if environment section exists
+            if (biomes != null) {
+                // Iterate through all biome entries for this environment
+                for (Map.Entry<String, Boolean> entry : biomes.entrySet()) {
+                    // Only add biomes that are explicitly enabled (value = true)
                     if (entry.getValue()) {
                         result.add(entry.getKey());
                     }

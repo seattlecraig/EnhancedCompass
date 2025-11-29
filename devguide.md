@@ -33,6 +33,7 @@ EnhancedCompass follows a **single-file architecture** pattern with modular inne
 | Server API | Bukkit/Spigot/Paper | Core Minecraft server integration |
 | Text/UI | Adventure API | Modern text components and boss bars |
 | Structure Lookup | Bukkit Registry API | Accurate structure identification |
+| Biome Lookup | Bukkit Registry API | Accurate biome identification |
 | Configuration | Bukkit YAML | Config and player data storage |
 | Scheduling | BukkitRunnable | Asynchronous boss bar updates |
 
@@ -68,12 +69,24 @@ EnhancedCompass extends JavaPlugin
 - Boss bar management
 - Player target management
 
+### Inner Enum: `TargetType`
+
+```java
+private enum TargetType {
+    STRUCTURE,
+    BIOME
+}
+```
+
+**Purpose:** Differentiate between structure and biome targets
+
 ### Inner Class: `CompassTarget`
 
 ```java
 private static class CompassTarget {
-    final String structureType;  // UPPER_CASE format
-    final Location location;      // World + coordinates
+    final TargetType targetType;   // STRUCTURE or BIOME
+    final String targetName;       // UPPER_CASE format (e.g., "ANCIENT_CITY" or "DARK_FOREST")
+    final Location location;       // World + coordinates
 }
 ```
 
@@ -91,6 +104,7 @@ private static class ConfigManager {
     private int searchRadius;
     private List<String> blacklistedWorlds;
     private Map<String, Map<String, Boolean>> enabledStructures;
+    private Map<String, Map<String, Boolean>> enabledBiomes;
 }
 ```
 
@@ -199,13 +213,80 @@ world.locateNearestStructure(location, type, radius, false);
 
 ---
 
-### 3. Data Persistence System
+### 3. Biome Search System
+
+**Search Type:**
+- **Specific Biome** - `/enhancedcompass biome dark_forest`
+
+**Search Flow:**
+
+```
+Player Command: /enhancedcompass biome <biome_name>
+  ↓
+Validate (permission, world, biome enabled)
+  ↓
+Registry.BIOME.get(NamespacedKey)
+  ↓
+World.locateNearestBiome(location, biome, radius, step)
+  ↓
+Set compass target + Store in memory + Save to disk
+  ↓
+Display results to player
+```
+
+**Implementation:**
+
+```java
+// Get biome from registry
+Biome biome = Registry.BIOME.get(NamespacedKey.minecraft(biomeInput));
+
+// Search for nearest biome
+// Note: radius is in BLOCKS (not chunks like structures)
+// Step size of 8 provides good balance of speed and precision
+var biomeResult = player.getWorld().locateNearestBiome(
+    player.getLocation(),
+    biome,
+    searchRadius * 16,  // Convert chunks to blocks
+    8  // Step size
+);
+```
+
+**Key Differences from Structure Search:**
+- Uses `Registry.BIOME` instead of `Registry.STRUCTURE`
+- Uses `World.locateNearestBiome()` instead of `World.locateNearestStructure()`
+- Radius parameter is in blocks, not chunks
+- Has a step parameter for search granularity
+
+---
+
+### 4. Data Persistence System
 
 **Storage Format:** YAML files in `playerdata/` directory
 
 **File Naming:** `<player-uuid>.yml`
 
-**File Structure:**
+**File Structure (v1.1.0+):**
+```yaml
+target-type: STRUCTURE
+target-name: ANCIENT_CITY
+world: world
+x: 123.456
+y: -45.0
+z: 789.012
+```
+
+Or for biome targets:
+```yaml
+target-type: BIOME
+target-name: DARK_FOREST
+world: world
+x: 456.789
+y: 64.0
+z: 123.456
+```
+
+**Backwards Compatibility:**
+Old format (v1.0.0) is still supported:
 ```yaml
 structure-type: ANCIENT_CITY
 world: world
@@ -232,7 +313,8 @@ Delayed Notification (1 second)
 // Save
 private void savePlayerTarget(Player player, CompassTarget target) {
     YamlConfiguration config = new YamlConfiguration();
-    config.set("structure-type", target.structureType);
+    config.set("target-type", target.targetType.toString());
+    config.set("target-name", target.targetName);
     config.set("world", target.location.getWorld().getName());
     config.set("x", target.location.getX());
     config.set("y", target.location.getY());
@@ -240,10 +322,17 @@ private void savePlayerTarget(Player player, CompassTarget target) {
     config.save(playerFile);
 }
 
-// Load
+// Load (with backwards compatibility)
 private void loadPlayerTarget(Player player) {
     YamlConfiguration config = YamlConfiguration.loadConfiguration(playerFile);
-    String structureType = config.getString("structure-type");
+    String targetTypeStr = config.getString("target-type", "STRUCTURE");
+    TargetType targetType = TargetType.valueOf(targetTypeStr);
+    
+    String targetName = config.getString("target-name");
+    if (targetName == null) {
+        // Backwards compatibility with old format
+        targetName = config.getString("structure-type");
+    }
     // ... create Location and CompassTarget
     playerTargets.put(player.getUniqueId(), target);
     player.setCompassTarget(location);
@@ -258,7 +347,7 @@ private void loadPlayerTarget(Player player) {
 
 ---
 
-### 4. Configuration System
+### 5. Configuration System
 
 **Structure:**
 
@@ -266,6 +355,10 @@ private void loadPlayerTarget(Player player) {
 search-radius: 100
 blacklisted-worlds: [...]
 enabled-structures:
+  normal: {...}
+  nether: {...}
+  the_end: {...}
+enabled-biomes:
   normal: {...}
   nether: {...}
   the_end: {...}
@@ -290,20 +383,23 @@ All config values cached in memory for O(1) access:
 - `searchRadius` - int
 - `blacklistedWorlds` - List<String>
 - `enabledStructures` - Map<String, Map<String, Boolean>>
+- `enabledBiomes` - Map<String, Map<String, Boolean>>
 
 **Access Methods:**
 ```java
 int getSearchRadius()
 boolean isWorldBlacklisted(String worldName)
 boolean isStructureEnabled(Environment env, String type)
+boolean isBiomeEnabled(Environment env, String type)
 List<String> getEnabledStructuresForEnvironment(Environment env)
+List<String> getEnabledBiomesForEnvironment(Environment env)
 ```
 
 ---
 
 ## Data Flow
 
-### Command Execution Flow
+### Command Execution Flow (Structure)
 
 ```
 Player types /enhancedcompass ancient_city
@@ -318,7 +414,7 @@ Check permission (enhancedcompass.use)
   ↓
 Check world blacklist
   ↓
-Handle special commands (current, village, anything)
+Handle special commands (current, village, anything, biome)
   ↓
 Validate structure enabled in config
   ↓
@@ -326,7 +422,39 @@ Get Structure from Registry
   ↓
 Call World.locateNearestStructure()
   ↓
-Create CompassTarget object
+Create CompassTarget object (type=STRUCTURE)
+  ↓
+Store in playerTargets map
+  ↓
+Set vanilla compass target
+  ↓
+Save to disk
+  ↓
+Send success message with distance
+```
+
+### Command Execution Flow (Biome)
+
+```
+Player types /enhancedcompass biome dark_forest
+  ↓
+CommandExecutor.onCommand() receives command
+  ↓
+Validate args[0] == "biome"
+  ↓
+Verify sender is Player (not console)
+  ↓
+Check permission (enhancedcompass.use)
+  ↓
+Check world blacklist
+  ↓
+Validate biome enabled in config
+  ↓
+Get Biome from Registry
+  ↓
+Call World.locateNearestBiome()
+  ↓
+Create CompassTarget object (type=BIOME)
   ↓
 Store in playerTargets map
   ↓
@@ -370,6 +498,8 @@ Player Joins:
   loadPlayerTarget(player)
   ↓
   Load YAML file
+  ↓
+  Parse target-type (STRUCTURE or BIOME)
   ↓
   Validate world exists
   ↓
@@ -425,7 +555,31 @@ world.locateNearestStructure(location, structure, radius, false);
 
 ---
 
-### 2. Boss Bar Lifecycle Management
+### 2. Biome Registry Lookup
+
+**Implementation:**
+```java
+// Get biome from registry
+Biome biome = Registry.BIOME.get(NamespacedKey.minecraft("dark_forest"));
+
+// Validate
+if (biome == null) {
+    player.sendMessage("Invalid biome type");
+    return true;
+}
+
+// Use in search
+world.locateNearestBiome(location, biome, radiusInBlocks, stepSize);
+```
+
+**Key Points:**
+- Biomes use `Registry.BIOME`
+- Radius is in blocks (not chunks)
+- Step size affects search granularity (lower = more precise, slower)
+
+---
+
+### 3. Boss Bar Lifecycle Management
 
 **Creation:**
 ```java
@@ -443,13 +597,13 @@ if (bossBar == null) {
 
 **Update:**
 ```java
-// Same dimension
-Component title = Component.text(structureName, NamedTextColor.AQUA)
+// Same dimension - works for both structures and biomes
+Component title = Component.text(targetName, NamedTextColor.AQUA)
     .append(Component.text(" - ", NamedTextColor.GRAY))
     .append(Component.text(distance + " blocks", NamedTextColor.YELLOW));
 
 // Different dimension
-Component title = Component.text(structureName, NamedTextColor.RED)
+Component title = Component.text(targetName, NamedTextColor.RED)
     .append(Component.text(" - ", NamedTextColor.GRAY))
     .append(Component.text("Not in same dimension", NamedTextColor.RED));
 ```
@@ -470,7 +624,7 @@ if (bossBar != null) {
 
 ---
 
-### 3. Distance Calculation
+### 4. Distance Calculation
 
 ```java
 double distance = player.getLocation().distance(target.location);
@@ -493,11 +647,11 @@ String.format("%.0f", distance)  // No decimal places
 
 ---
 
-### 4. Structure Name Formatting
+### 5. Name Formatting
 
 ```java
-private String formatStructureName(String structureType) {
-    String[] words = structureType.split("_");
+private String formatStructureName(String name) {
+    String[] words = name.split("_");
     StringBuilder result = new StringBuilder();
     for (String word : words) {
         if (result.length() > 0) result.append(" ");
@@ -511,40 +665,8 @@ private String formatStructureName(String structureType) {
 **Transformations:**
 - `ANCIENT_CITY` → "Ancient City"
 - `VILLAGE_PLAINS` → "Village Plains"
-- `STRONGHOLD` → "Stronghold"
-
----
-
-### 5. Generic Structure Searches
-
-**Village Search:**
-```java
-String[] villageTypes = {
-    "village_plains", "village_desert", "village_savanna",
-    "village_snowy", "village_taiga"
-};
-
-for (String villageType : villageTypes) {
-    if (!configManager.isStructureEnabled(env, villageType.toUpperCase())) {
-        continue;  // Skip disabled villages
-    }
-    // Search for this village type
-    // Track closest found
-}
-```
-
-**Anything Search:**
-```java
-List<String> enabledStructures = 
-    configManager.getEnabledStructuresForEnvironment(environment);
-
-for (String structureType : enabledStructures) {
-    // Search for each enabled structure
-    // Track absolute closest across all types
-}
-```
-
-**Performance:** O(n) where n = number of enabled structures. Each structure search is independent.
+- `DARK_FOREST` → "Dark Forest"
+- `CHERRY_GROVE` → "Cherry Grove"
 
 ---
 
@@ -557,6 +679,7 @@ public List<String> onTabComplete(...) {
         // Add subcommands
         completions.add("help");
         completions.add("current");
+        completions.add("biome");     // NEW: biome subcommand
         completions.add("village");
         completions.add("anything");
         
@@ -566,19 +689,25 @@ public List<String> onTabComplete(...) {
         
         // Add structure types based on sender
         if (sender instanceof Player) {
-            // Player: only enabled structures for their dimension
             completions.addAll(getEnabledStructuresForDimension());
         } else {
-            // Console: all structures from registry
             Registry.STRUCTURE.forEach(s -> completions.add(s.getKey().getKey()));
         }
         
-        // Filter and return
-        return completions.stream()
-            .filter(s -> s.startsWith(args[0].toLowerCase()))
-            .sorted()
-            .collect(Collectors.toList());
+        return filterAndSort(completions, args[0]);
     }
+    
+    // NEW: Second argument for biome command
+    if (args.length == 2 && args[0].equalsIgnoreCase("biome")) {
+        if (sender instanceof Player) {
+            completions.addAll(getEnabledBiomesForDimension());
+        } else {
+            Registry.BIOME.forEach(b -> completions.add(b.getKey().getKey()));
+        }
+        
+        return filterAndSort(completions, args[1]);
+    }
+    
     return completions;
 }
 ```
@@ -644,7 +773,7 @@ bossBar.overlay(BossBar.Overlay.NOTCHED_10);  // Change style
 ```java
 private Map<UUID, Long> cooldowns = new HashMap<>();
 
-// In onCommand(), before structure search:
+// In onCommand(), before structure/biome search:
 long lastUse = cooldowns.getOrDefault(player.getUniqueId(), 0L);
 long cooldown = 60000L; // 60 seconds in milliseconds
 if (System.currentTimeMillis() - lastUse < cooldown) {
@@ -657,7 +786,7 @@ cooldowns.put(player.getUniqueId(), System.currentTimeMillis());
 
 **2. Add Cost System (Vault integration):**
 ```java
-// In onCommand(), before structure search:
+// In onCommand(), before structure/biome search:
 if (!economy.has(player, cost)) {
     player.sendMessage("You need " + cost + " to use this!");
     return true;
@@ -667,9 +796,9 @@ economy.withdrawPlayer(player, cost);
 
 **3. Add Distance Limit:**
 ```java
-// After structure found:
+// After structure/biome found:
 if (distance > maxDistance) {
-    player.sendMessage("Structure too far away! (Max: " + maxDistance + ")");
+    player.sendMessage("Target too far away! (Max: " + maxDistance + ")");
     return true;
 }
 ```
@@ -691,85 +820,66 @@ if (history.size() > 10) history.remove(0); // Keep last 10
 // Load from config
 String searchMessage = config.getString(
     "messages.searching", 
-    "Searching for nearest {structure}..."
+    "Searching for nearest {target}..."
 );
 
 // Use in code
-player.sendMessage(searchMessage.replace("{structure}", structureName));
+player.sendMessage(searchMessage.replace("{target}", targetName));
 ```
 
 ---
 
 ## Build & Development
 
+### Requirements
+
+- **Java Development Kit**: JDK 17+
+- **Build Tool**: Maven or Gradle
+- **IDE**: IntelliJ IDEA recommended
+
+### Maven Setup
+
+```xml
+<dependencies>
+    <dependency>
+        <groupId>io.papermc.paper</groupId>
+        <artifactId>paper-api</artifactId>
+        <version>1.20.4-R0.1-SNAPSHOT</version>
+        <scope>provided</scope>
+    </dependency>
+</dependencies>
+```
+
 ### Project Structure
 
 ```
-src/
-└── com/supafloof/enhancedcompass/
-    └── EnhancedCompass.java (single file)
-
-resources/
-├── plugin.yml
-└── config.yml
-```
-
-### Build Configuration (Maven)
-
-```xml
-<project>
-    <modelVersion>4.0.0</modelVersion>
-    <groupId>com.supafloof</groupId>
-    <artifactId>enhancedcompass</artifactId>
-    <version>1.0.0</version>
-    
-    <properties>
-        <maven.compiler.source>17</maven.compiler.source>
-        <maven.compiler.target>17</maven.compiler.target>
-    </properties>
-    
-    <repositories>
-        <repository>
-            <id>papermc</id>
-            <url>https://repo.papermc.io/repository/maven-public/</url>
-        </repository>
-    </repositories>
-    
-    <dependencies>
-        <dependency>
-            <groupId>io.papermc.paper</groupId>
-            <artifactId>paper-api</artifactId>
-            <version>1.20.1-R0.1-SNAPSHOT</version>
-            <scope>provided</scope>
-        </dependency>
-    </dependencies>
-    
-    <build>
-        <resources>
-            <resource>
-                <directory>src/main/resources</directory>
-                <filtering>true</filtering>
-            </resource>
-        </resources>
-    </build>
-</project>
+EnhancedCompass/
+├── src/
+│   └── main/
+│       ├── java/
+│       │   └── com/supafloof/enhancedcompass/
+│       │       └── EnhancedCompass.java
+│       └── resources/
+│           ├── plugin.yml
+│           └── config.yml
+├── pom.xml
+└── README.md
 ```
 
 ### plugin.yml
 
 ```yaml
 name: EnhancedCompass
-version: 1.0.0
+version: 1.1.0
 main: com.supafloof.enhancedcompass.EnhancedCompass
-api-version: 1.19
-author: SupaFloof Games, LLC
-description: Enhanced compass with structure targeting and real-time distance display
+api-version: '1.19'
+description: Point your compass to any structure or biome with real-time distance tracking
 
 commands:
   enhancedcompass:
     description: Enhanced compass commands
-    usage: /<command> [help|reload|current|village|anything|<structure>]
     aliases: [ecompass, ec]
+    usage: /enhancedcompass <structure|biome|village|anything|current|help|reload>
 
 permissions:
   enhancedcompass.use:
@@ -780,197 +890,72 @@ permissions:
     default: op
 ```
 
-### Development Environment Setup
-
-1. **Install Prerequisites:**
-   - Java 17+
-   - Maven 3.6+
-   - IDE (IntelliJ IDEA recommended)
-
-2. **Clone/Create Project:**
-   ```bash
-   mkdir EnhancedCompass
-   cd EnhancedCompass
-   mvn archetype:generate \
-     -DgroupId=com.supafloof \
-     -DartifactId=enhancedcompass \
-     -DarchetypeArtifactId=maven-archetype-quickstart
-   ```
-
-3. **Add Paper Dependency:**
-   Add Paper repository and dependency to pom.xml
-
-4. **Create Source File:**
-   Place EnhancedCompass.java in `src/main/java/com/supafloof/enhancedcompass/`
-
-5. **Create Resources:**
-   Place plugin.yml and config.yml in `src/main/resources/`
-
-6. **Build:**
-   ```bash
-   mvn clean package
-   ```
-
-7. **Output:**
-   JAR file in `target/enhancedcompass-1.0.0.jar`
-
 ---
 
 ## Testing Guidelines
 
-### Unit Testing Approach
+### Manual Testing Checklist
 
-**Challenge:** Bukkit plugins are difficult to unit test due to server dependencies.
+**Structure Search:**
+- [ ] Find structure in same dimension
+- [ ] Try structure in wrong dimension
+- [ ] Try disabled structure
+- [ ] Try invalid structure name
+- [ ] Test tab completion
 
-**Recommendation:** Integration testing on test server.
+**Biome Search:**
+- [ ] Find biome in same dimension
+- [ ] Try biome in wrong dimension
+- [ ] Try disabled biome
+- [ ] Try invalid biome name
+- [ ] Test tab completion for second argument
 
-### Test Scenarios
+**Boss Bar:**
+- [ ] Bar appears when holding compass
+- [ ] Bar disappears when compass put away
+- [ ] Distance updates while moving
+- [ ] Cross-dimension warning displays
 
-**1. Basic Functionality:**
-```
-✓ Plugin loads without errors
-✓ Config loads with default values
-✓ Commands register correctly
-✓ Permissions work as expected
-```
+**Persistence:**
+- [ ] Target persists after logout
+- [ ] Target loads on login
+- [ ] Notification shows after join
 
-**2. Structure Search:**
-```
-✓ Valid structure found successfully
-✓ Invalid structure rejected
-✓ Disabled structure rejected
-✓ Structure not found handled gracefully
-✓ Search radius respected
-```
-
-**3. Boss Bar:**
-```
-✓ Boss bar appears when holding compass
-✓ Boss bar disappears when not holding compass
-✓ Boss bar updates distance correctly
-✓ Boss bar shows cross-dimension warning
-✓ Boss bar handles null targets
-```
-
-**4. Data Persistence:**
-```
-✓ Target saved immediately after set
-✓ Target saved on player quit
-✓ Target loaded on player join
-✓ Invalid world handled gracefully
-✓ Corrupted file handled gracefully
-```
-
-**5. Configuration:**
-```
-✓ Reload command works
-✓ Search radius changes take effect
-✓ Blacklisted worlds respected
-✓ Enabled structures respected
-✓ Invalid config handled gracefully
-```
-
-**6. Permissions:**
-```
-✓ Use permission required for commands
-✓ Reload permission required for reload
-✓ Permission checks work from console
-```
-
-**7. Edge Cases:**
-```
-✓ Multiple players searching simultaneously
-✓ Player quits while searching
-✓ Server restart with active targets
-✓ World deleted with saved targets
-✓ Empty config sections
-```
-
-### Test Server Setup
-
-```bash
-# Create test server
-mkdir test-server
-cd test-server
-
-# Download Paper
-wget https://api.papermc.io/v2/projects/paper/versions/1.20.1/builds/latest/downloads/paper-1.20.1.jar
-
-# Accept EULA
-echo "eula=true" > eula.txt
-
-# Start server
-java -Xmx2G -jar paper-1.20.1.jar nogui
-
-# Stop server, add plugin
-cp EnhancedCompass.jar plugins/
-
-# Restart and test
-java -Xmx2G -jar paper-1.20.1.jar nogui
-```
+**Config:**
+- [ ] Reload command works
+- [ ] Disabled structures can't be searched
+- [ ] Disabled biomes can't be searched
+- [ ] Blacklisted worlds block commands
 
 ---
 
 ## Performance Considerations
 
-### Bottlenecks and Optimizations
+### Boss Bar Updates
 
-**1. Boss Bar Updates:**
-
-**Current:** O(n) every 10 ticks, where n = online players
-
-**Optimization Potential:**
+**Current Implementation:** O(n) per tick
 ```java
-// Only check players who have targets set
-for (UUID uuid : playerTargets.keySet()) {
-    Player player = Bukkit.getPlayer(uuid);
-    if (player != null && player.isOnline()) {
-        // Check and update
-    }
+for (Player player : Bukkit.getOnlinePlayers()) {
+    // Check compass, update boss bar
 }
 ```
 
-**2. Structure Searches:**
+**Optimization Options:**
+1. Track compass holders separately (reduce iteration)
+2. Increase tick interval (reduce frequency)
+3. Skip players without targets (already implemented)
 
-**Current:** Synchronous, blocks main thread during search
+### Structure/Biome Searches
 
-**Optimization Potential:**
-```java
-// Run search asynchronously
-Bukkit.getScheduler().runTaskAsynchronously(this, () -> {
-    var result = world.locateNearestStructure(...);
-    // Switch back to main thread for player interaction
-    Bukkit.getScheduler().runTask(this, () -> {
-        // Update player compass
-    });
-});
-```
+**Structure Search:**
+- Uses world generator data
+- Performance scales with radius
+- May cause brief TPS drop for large radius
 
-**Warning:** World operations should generally be on main thread. Test carefully.
-
-**3. Configuration Access:**
-
-**Current:** O(1) - all values cached in memory ✓
-
-**Already Optimized:** No improvements needed.
-
-**4. Data Persistence:**
-
-**Current:** Synchronous file I/O
-
-**Optimization Potential:**
-```java
-// Save asynchronously
-Bukkit.getScheduler().runTaskAsynchronously(this, () -> {
-    config.save(playerFile);
-});
-```
-
-**5. Distance Calculations:**
-
-**Current:** Using Location.distance() - already optimal ✓
-
-**Algorithm:** Built-in efficient implementation.
+**Biome Search:**
+- Uses `locateNearestBiome()` with step size
+- Step size of 8 blocks is reasonable balance
+- Larger radius = longer search time
 
 ### Memory Usage
 
@@ -1001,7 +986,7 @@ public void onPlayerJoin(PlayerJoinEvent event) {
 ```java
 private double searchCost = 100.0;
 
-// In onCommand(), before structure search:
+// In onCommand(), before structure/biome search:
 if (economy != null && economy.has(player, searchCost)) {
     economy.withdrawPlayer(player, searchCost);
 } else {
@@ -1054,7 +1039,7 @@ for (String key : config.getConfigurationSection("messages").getKeys(false)) {
 
 // Usage:
 player.sendMessage(messages.get("search.starting")
-    .replace("{structure}", structureName));
+    .replace("{target}", targetName));
 ```
 
 ---
@@ -1066,7 +1051,7 @@ player.sendMessage(messages.get("search.starting")
 **Create Service Interface:**
 ```java
 public interface EnhancedCompassAPI {
-    void setPlayerTarget(Player player, String structureType, Location location);
+    void setPlayerTarget(Player player, TargetType type, String name, Location location);
     CompassTarget getPlayerTarget(Player player);
     void clearPlayerTarget(Player player);
 }
@@ -1076,8 +1061,8 @@ public interface EnhancedCompassAPI {
 ```java
 public class EnhancedCompass extends JavaPlugin implements EnhancedCompassAPI {
     @Override
-    public void setPlayerTarget(Player player, String structureType, Location location) {
-        CompassTarget target = new CompassTarget(structureType, location);
+    public void setPlayerTarget(Player player, TargetType type, String name, Location location) {
+        CompassTarget target = new CompassTarget(type, name, location);
         playerTargets.put(player.getUniqueId(), target);
         player.setCompassTarget(location);
         savePlayerTarget(player, target);
@@ -1116,7 +1101,7 @@ EnhancedCompassAPI api = Bukkit.getServicesManager()
     .getRegistration(EnhancedCompassAPI.class)
     .getProvider();
 
-api.setPlayerTarget(player, "ANCIENT_CITY", location);
+api.setPlayerTarget(player, TargetType.BIOME, "DARK_FOREST", location);
 ```
 
 ---
@@ -1133,7 +1118,7 @@ debug = config.getBoolean("debug", false);
 
 // Usage:
 if (debug) {
-    getLogger().info("Player " + player.getName() + " searching for " + structure);
+    getLogger().info("Player " + player.getName() + " searching for " + target);
 }
 ```
 
@@ -1149,12 +1134,12 @@ if (debug) {
 }
 ```
 
-**Structure Not Found:**
+**Structure/Biome Not Found:**
 ```java
 // Log search parameters:
-getLogger().info("Searching for: " + structureInput);
+getLogger().info("Searching for: " + targetInput);
 getLogger().info("Search radius: " + searchRadius);
-getLogger().info("Structure enabled: " + configManager.isStructureEnabled(env, structureInput));
+getLogger().info("Target enabled: " + configManager.isStructureEnabled(env, targetInput));
 ```
 
 **Config Not Loading:**
@@ -1174,6 +1159,7 @@ if (!config.contains("search-radius")) {
 **Tested On:**
 - 1.19.x ✓
 - 1.20.x ✓
+- 1.21.x ✓
 
 **Should Work:**
 - Any version with Bukkit Registry API (1.19+)
@@ -1264,16 +1250,17 @@ if (!config.contains("search-radius")) {
 
 ### Potential Features
 
-1. **GUI Interface**: Click-based structure selection
+1. **GUI Interface**: Click-based structure/biome selection
 2. **Waypoint System**: Multiple saved locations
 3. **Shared Targets**: Party/guild shared compasses
 4. **Dimension Linking**: Auto-convert coordinates between dimensions
 5. **Custom Structures**: Support for custom/modded structures
-6. **Statistics**: Track searches per player/structure
-7. **Economy Integration**: Costs per search
-8. **Cooldowns**: Per-player or per-structure cooldowns
-9. **Distance Limits**: Maximum search distance per permission
-10. **Search History**: Recent searches per player
+6. **Custom Biomes**: Support for custom/modded biomes
+7. **Statistics**: Track searches per player/target
+8. **Economy Integration**: Costs per search
+9. **Cooldowns**: Per-player or per-target cooldowns
+10. **Distance Limits**: Maximum search distance per permission
+11. **Search History**: Recent searches per player
 
 ---
 
@@ -1299,7 +1286,7 @@ if (!config.contains("search-radius")) {
 ## License & Credits
 
 **Author:** SupaFloof Games, LLC  
-**Version:** 1.0.0  
+**Version:** 1.1.0  
 **License:** (Specify your license here)
 
 ---

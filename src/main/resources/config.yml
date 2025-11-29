@@ -6,7 +6,6 @@ search-radius: 300
 # Worlds where enhanced compass is disabled
 blacklisted-worlds:
   - lobby
-  - prohub
 
 # Enabled structures per world type
 enabled-structures:
@@ -48,3 +47,75 @@ enabled-structures:
     
   the_end:
     end_city: true
+
+# Enabled biomes per world type
+enabled-biomes:
+  normal:
+    badlands: true
+    bamboo_jungle: true
+    beach: true
+    birch_forest: true
+    cherry_grove: true
+    cold_ocean: true
+    dark_forest: true
+    deep_cold_ocean: true
+    deep_dark: true
+    deep_frozen_ocean: true
+    deep_lukewarm_ocean: true
+    deep_ocean: true
+    desert: true
+    dripstone_caves: true
+    eroded_badlands: true
+    flower_forest: true
+    forest: true
+    frozen_ocean: true
+    frozen_peaks: true
+    frozen_river: true
+    grove: true
+    ice_spikes: true
+    jagged_peaks: true
+    jungle: true
+    lukewarm_ocean: true
+    lush_caves: true
+    mangrove_swamp: true
+    meadow: true
+    mushroom_fields: true
+    ocean: true
+    old_growth_birch_forest: true
+    old_growth_pine_taiga: true
+    old_growth_spruce_taiga: true
+    pale_garden: true
+    plains: true
+    river: true
+    savanna: true
+    savanna_plateau: true
+    snowy_beach: true
+    snowy_plains: true
+    snowy_slopes: true
+    snowy_taiga: true
+    sparse_jungle: true
+    stony_peaks: true
+    stony_shore: true
+    sunflower_plains: true
+    swamp: true
+    taiga: true
+    warm_ocean: true
+    windswept_forest: true
+    windswept_gravelly_hills: true
+    windswept_hills: true
+    windswept_savanna: true
+    wooded_badlands: true
+    
+  nether:
+    basalt_deltas: true
+    crimson_forest: true
+    nether_wastes: true
+    soul_sand_valley: true
+    warped_forest: true
+    
+  the_end:
+    end_barrens: true
+    end_highlands: true
+    end_midlands: true
+    small_end_islands: true
+    the_end: true

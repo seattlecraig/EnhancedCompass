@@ -9,9 +9,9 @@ PAGE 1
 =====================================
 WHAT IS THIS?
 
-EnhancedCompass lets you point your compass to any structure in Minecraft.
+EnhancedCompass lets you point your compass to any structure or biome in Minecraft.
 
-When you hold a compass, a boss bar appears showing the structure name and distance.
+When you hold a compass, a boss bar appears showing the target name and distance.
 =====================================
 PAGE 2
 =====================================
@@ -32,6 +32,9 @@ Shows command help
 
 /enhancedcompass <structure>
 Points compass to that structure
+
+/enhancedcompass biome <biome>
+Points compass to that biome
 
 /enhancedcompass current
 Shows your current target
@@ -77,15 +80,61 @@ Use tab completion to see all available structures!
 =====================================
 PAGE 7
 =====================================
-BOSS BAR COLORS
+EXAMPLE BIOMES
 
-Aqua structure name + Yellow distance:
-Target is in your dimension
-
-Red structure name + Red warning:
-Target is in a different dimension
+Overworld:
+dark_forest
+cherry_grove
+mushroom_fields
+deep_dark
+lush_caves
+jungle
+badlands
+ice_spikes
+flower_forest
+mangrove_swamp
+pale_garden
 =====================================
 PAGE 8
+=====================================
+EXAMPLE BIOMES
+
+Nether:
+crimson_forest
+warped_forest
+soul_sand_valley
+basalt_deltas
+
+End:
+end_highlands
+small_end_islands
+
+Use tab completion to see all available biomes!
+=====================================
+PAGE 9
+=====================================
+BIOME COMMAND
+
+/enhancedcompass biome <biome_name>
+
+Example:
+/enhancedcompass biome dark_forest
+
+Result:
+"Compass now pointing to Dark Forest biome!"
+"Distance: 523 blocks"
+=====================================
+PAGE 10
+=====================================
+BOSS BAR COLORS
+
+Aqua target name + Yellow distance:
+Target is in your dimension
+
+Red target name + Red warning:
+Target is in a different dimension
+=====================================
+PAGE 11
 =====================================
 BOSS BAR BEHAVIOR
 
@@ -94,7 +143,7 @@ BOSS BAR BEHAVIOR
 - Disappears when you put the compass away
 - Shows real-time distance in blocks
 =====================================
-PAGE 9
+PAGE 12
 =====================================
 FINDING A VILLAGE
 
@@ -108,7 +157,7 @@ Result:
 Boss bar appears:
 Village Plains - 892 blocks
 =====================================
-PAGE 10
+PAGE 13
 =====================================
 FINDING ANCIENT CITY
 
@@ -121,7 +170,20 @@ Result:
 
 Follow compass, dig down when close!
 =====================================
-PAGE 11
+PAGE 14
+=====================================
+FINDING A BIOME
+
+Command:
+/enhancedcompass biome cherry_grove
+
+Result:
+"Compass now pointing to Cherry Grove biome!"
+"Distance: 1,876 blocks"
+
+Follow compass to find pink trees!
+=====================================
+PAGE 15
 =====================================
 USING "ANYTHING"
 
@@ -132,7 +194,7 @@ Finds whatever structure is closest to you.
 
 Good for random exploration!
 =====================================
-PAGE 12
+PAGE 16
 =====================================
 CHECKING YOUR TARGET
 
@@ -140,12 +202,14 @@ Command:
 /enhancedcompass current
 
 Shows:
-"Current target: Stronghold"
+"Current target (Structure): Stronghold"
 "Distance: 3,421 blocks"
 
-Useful if you forget what you're searching for.
+or:
+"Current target (Biome): Dark Forest"
+"Distance: 456 blocks"
 =====================================
-PAGE 13
+PAGE 17
 =====================================
 TAB COMPLETION
 
@@ -157,9 +221,22 @@ Example:
 Completes to:
 /enhancedcompass ancient_city
 
-Works for all structure names!
+Works for structures AND biomes!
 =====================================
-PAGE 14
+PAGE 18
+=====================================
+BIOME TAB COMPLETION
+
+Type:
+/enhancedcompass biome [TAB]
+
+Shows all available biomes:
+dark_forest
+cherry_grove
+mushroom_fields
+...and more!
+=====================================
+PAGE 19
 =====================================
 PERSISTENT TARGETS
 
@@ -170,19 +247,19 @@ It stays set even if you:
 - Die
 - Server restarts
 
-To change target, just search for a new structure.
+To change target, just search for a new structure or biome.
 =====================================
-PAGE 15
+PAGE 20
 =====================================
 DISTANCE EXPLAINED
 
-Distance is "as the crow flies" - a straight line from you to the structure.
+Distance is "as the crow flies" - a straight line from you to the target.
 
 Includes height (Y-level).
 
 Actual walking distance may be longer due to terrain.
 =====================================
-PAGE 16
+PAGE 21
 =====================================
 CROSS-DIMENSION
 
@@ -193,7 +270,7 @@ Boss bar shows:
 
 Return to the correct dimension to see the real distance.
 =====================================
-PAGE 17
+PAGE 22
 =====================================
 STRUCTURE SEARCH
 
@@ -204,7 +281,7 @@ When you run a search command, the plugin:
 3. Points your compass to it
 4. Shows you the distance
 =====================================
-PAGE 18
+PAGE 23
 =====================================
 PERMISSION REQUIRED
 
@@ -213,7 +290,7 @@ enhancedcompass.use
 
 If you see "You don't have permission" ask your server admin.
 =====================================
-PAGE 19
+PAGE 24
 =====================================
 QUICK REFERENCE
 
@@ -226,14 +303,17 @@ Find any structure
 /enhancedcompass <name>
 Find specific structure
 
+/enhancedcompass biome <name>
+Find specific biome
+
 /enhancedcompass current
 Check target
 =====================================
-PAGE 20
+PAGE 25
 =====================================
 TIPS
 
-1. Use tab completion to explore available structures
+1. Use tab completion to explore available structures and biomes
 
 2. Try "anything" for random exploration
 
@@ -243,11 +323,11 @@ TIPS
 
 5. Distance updates in real-time
 =====================================
-PAGE 21
+PAGE 26
 =====================================
 That's it!
 
-You now know how to use EnhancedCompass.
+You now know how to use EnhancedCompass to find structures AND biomes.
 
 Happy exploring!
 

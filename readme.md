@@ -1,27 +1,28 @@
 # EnhancedCompass
 
-> **Transform your Minecraft compass into a powerful structure-finding tool with real-time distance tracking!**
+> **Transform your Minecraft compass into a powerful structure and biome finding tool with real-time distance tracking!**
 
 [![Server Type](https://img.shields.io/badge/Server-Paper%20%2F%20Spigot-orange)](https://papermc.io/)
 [![Minecraft Version](https://img.shields.io/badge/Minecraft-1.19%2B-brightgreen)](https://www.minecraft.net/)
 [![Java Version](https://img.shields.io/badge/Java-17%2B-blue)](https://adoptium.net/)
 [![License](https://img.shields.io/badge/License-Custom-red)]()
 
-EnhancedCompass is a feature-rich Minecraft plugin that supercharges the vanilla compass, allowing players to point their compass to **any structure** in the game—villages, ancient cities, strongholds, End cities, and more! Best of all, when you hold your compass, a **boss bar** displays the structure name and real-time distance as you travel.
+EnhancedCompass is a feature-rich Minecraft plugin that supercharges the vanilla compass, allowing players to point their compass to **any structure** or **any biome** in the game—villages, ancient cities, strongholds, End cities, dark forests, cherry groves, and more! Best of all, when you hold your compass, a **boss bar** displays the target name and real-time distance as you travel.
 
 ---
 
 ## ✨ Features at a Glance
 
 🎯 **Point to Any Structure** - Find villages, temples, strongholds, ancient cities, bastions, End cities, and every other structure in Minecraft  
-📏 **Real-Time Distance Display** - Boss bar shows structure name and distance, updating every 0.5 seconds  
+🌲 **Point to Any Biome** - Find dark forests, cherry groves, mushroom fields, deep dark, and every other biome  
+📏 **Real-Time Distance Display** - Boss bar shows target name and distance, updating every 0.5 seconds  
 🌍 **Multi-Dimension Support** - Works seamlessly in Overworld, Nether, and End  
 🔍 **Smart Generic Searches** - Use `village` to find any village type, or `anything` to find the nearest structure of any kind  
 💾 **Persistent Targets** - Your compass remembers your target even after logout or server restart  
-⚙️ **Highly Configurable** - Whitelist structures per dimension, set search radius, blacklist worlds  
+⚙️ **Highly Configurable** - Whitelist structures and biomes per dimension, set search radius, blacklist worlds  
 🔐 **Permission-Based** - Fine-grained permission system for access control  
 🎨 **Beautiful UI** - Colored boss bars with Adventure API text components  
-⌨️ **Tab Completion** - Full auto-completion for all commands and structure names  
+⌨️ **Tab Completion** - Full auto-completion for all commands, structure names, and biome names  
 🔄 **Hot Reload** - Configuration changes without server restart  
 📖 **Comprehensive Documentation** - Detailed guides for players, admins, and developers
 
@@ -30,9 +31,10 @@ EnhancedCompass is a feature-rich Minecraft plugin that supercharges the vanilla
 ## 🎮 Quick Start for Players
 
 1. **Get a compass** (any compass works, even enchanted ones!)
-2. **Run a command** to find a structure:
+2. **Run a command** to find a structure or biome:
    ```
    /enhancedcompass ancient_city
+   /enhancedcompass biome dark_forest
    ```
 3. **Hold your compass** and watch the boss bar appear
 4. **Follow the compass** and watch your distance count down!
@@ -46,10 +48,13 @@ EnhancedCompass is a feature-rich Minecraft plugin that supercharges the vanilla
 /enhancedcompass stronghold      # Find nearest stronghold
 /enhancedcompass fortress        # Find nearest nether fortress
 /enhancedcompass end_city        # Find nearest End city
+/enhancedcompass biome dark_forest    # Find nearest dark forest
+/enhancedcompass biome cherry_grove   # Find nearest cherry grove
+/enhancedcompass biome mushroom_fields # Find nearest mushroom fields
 /enhancedcompass current         # Check your current target
 ```
 
-Use **tab completion** to see all available structures!
+Use **tab completion** to see all available structures and biomes!
 
 ---
 
@@ -92,6 +97,19 @@ enabled-structures:
     bastion_remnant: true
   the_end:   # End
     end_city: true
+
+# Biome whitelist per dimension
+enabled-biomes:
+  normal:    # Overworld
+    dark_forest: true
+    cherry_grove: true
+    mushroom_fields: true
+    # ... and more
+  nether:    # Nether
+    crimson_forest: true
+    warped_forest: true
+  the_end:   # End
+    end_highlands: true
 ```
 
 ### Permissions
@@ -124,6 +142,7 @@ When you hold a compass with a target set, a boss bar appears at the top of your
 **Same Dimension:**
 ```
 Ancient City - 1,432 blocks
+Dark Forest - 523 blocks
 ```
 - Aqua text = Target is in your dimension
 - Yellow distance = Real-time block count
@@ -152,9 +171,21 @@ The plugin uses Minecraft's **built-in structure location system** to find struc
 5. Target is saved for persistence
 6. Boss bar shows real-time distance
 
+### Biome Searches
+
+The plugin uses Minecraft's **built-in biome location system** to find biomes:
+
+1. You run `/enhancedcompass biome <biome_name>`
+2. Plugin queries the world within configured radius
+3. Nearest matching biome is found
+4. Vanilla compass is set to point to the biome
+5. Target is saved for persistence
+6. Boss bar shows real-time distance
+
 **Search Types:**
 
-- **Specific**: `/enhancedcompass ancient_city` - Find exact structure type
+- **Specific Structure**: `/enhancedcompass ancient_city` - Find exact structure type
+- **Specific Biome**: `/enhancedcompass biome dark_forest` - Find exact biome type
 - **Generic Village**: `/enhancedcompass village` - Find any village (plains, desert, snowy, etc.)
 - **Generic Any**: `/enhancedcompass anything` - Find any enabled structure in current dimension
 
@@ -164,15 +195,15 @@ The plugin uses Minecraft's **built-in structure location system** to find struc
 
 ### Search Radius
 
-Control how far structure searches extend:
+Control how far structure and biome searches extend:
 
 ```yaml
 search-radius: 100  # In chunks (100 chunks = 1,600 blocks)
 ```
 
-- **Lower values (25-50)**: Faster searches, but may not find structures
+- **Lower values (25-50)**: Faster searches, but may not find targets
 - **Medium values (50-100)**: Balanced performance and success rate
-- **Higher values (100-200)**: Find distant structures but slower searches
+- **Higher values (100-200)**: Find distant targets but slower searches
 
 ### World Blacklist
 
@@ -194,7 +225,6 @@ Perfect for:
 
 Control which structures can be found per dimension:
 
-**Easy Mode (Everything Enabled):**
 ```yaml
 normal:
   ancient_city: true
@@ -203,21 +233,17 @@ normal:
   # ... everything true
 ```
 
-**Balanced Mode (Selective):**
-```yaml
-normal:
-  stronghold: false      # Rare structures disabled
-  ancient_city: false
-  village_plains: true   # Common structures enabled
-  temple_desert: true
-```
+### Biome Whitelist
 
-**Hard Mode (Minimal):**
+Control which biomes can be found per dimension:
+
 ```yaml
 normal:
-  village_plains: true   # Only villages allowed
-  village_desert: true
-  # Everything else false
+  dark_forest: true
+  cherry_grove: true
+  mushroom_fields: true
+  deep_dark: true
+  # ... everything true
 ```
 
 ---
@@ -236,6 +262,7 @@ normal:
 ```
 /enhancedcompass help              # Show help menu
 /enhancedcompass <structure>       # Find specific structure
+/enhancedcompass biome <biome>     # Find specific biome
 /enhancedcompass village           # Find any village
 /enhancedcompass anything          # Find any structure
 /enhancedcompass current           # Show current target
@@ -264,6 +291,11 @@ plugins/EnhancedCompass/playerdata/*.yml        # Player targets
 │  Ancient City - 1,432 blocks           │
 └────────────────────────────────────────┘
 ```
+```
+┌────────────────────────────────────────┐
+│  Dark Forest - 523 blocks              │
+└────────────────────────────────────────┘
+```
 
 ### Command Output
 ```
@@ -271,6 +303,11 @@ plugins/EnhancedCompass/playerdata/*.yml        # Player targets
 Searching for nearest Ancient City...
 Compass now pointing to Ancient City!
 Distance: 1,432 blocks
+
+> /enhancedcompass biome cherry_grove
+Searching for nearest Cherry Grove biome...
+Compass now pointing to Cherry Grove biome!
+Distance: 876 blocks
 ```
 
 ### Help Menu
@@ -280,6 +317,7 @@ Enhanced Compass Commands
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 /enhancedcompass help - Show this help menu
 /enhancedcompass <structure> - Point compass to nearest structure
+/enhancedcompass biome <biome> - Point compass to nearest biome
 /enhancedcompass current - Show current compass target
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ```
@@ -291,14 +329,15 @@ Enhanced Compass Commands
 ### For Players
 
 - **No More Getting Lost** - Always know exactly how far away your target is
-- **Save Time** - Find structures quickly instead of wandering aimlessly
+- **Save Time** - Find structures and biomes quickly instead of wandering aimlessly
 - **Explore Efficiently** - Use "anything" mode for random exploration
+- **Find Rare Biomes** - Easily locate cherry groves, mushroom fields, and more
 - **Persistent Targets** - Your compass remembers where you were going
 - **Easy to Use** - Simple commands with tab completion
 
 ### For Server Owners
 
-- **Balanced Gameplay** - Disable rare structures to maintain challenge
+- **Balanced Gameplay** - Disable rare structures or biomes to maintain challenge
 - **Flexible Configuration** - Control everything via simple config file
 - **Performance Friendly** - Minimal server impact, efficient code
 - **Zero Dependencies** - No external plugins required
@@ -321,9 +360,9 @@ Enhanced Compass Commands
 ### Architecture
 
 - **Single File Design** - All code in one Java file for simplicity
-- **Inner Classes** - Modular components (ConfigManager, CompassTarget)
+- **Inner Classes** - Modular components (ConfigManager, CompassTarget, TargetType)
 - **Adventure API** - Modern text components and boss bars
-- **Bukkit Registry** - Accurate structure identification
+- **Bukkit Registry** - Accurate structure and biome identification
 - **YAML Storage** - Config and player data persistence
 - **Scheduled Tasks** - Async boss bar updates every 0.5 seconds
 
@@ -331,6 +370,7 @@ Enhanced Compass Commands
 
 - **Boss Bar Updates**: O(n) where n = players holding compass
 - **Structure Searches**: World generator queries (async-safe)
+- **Biome Searches**: World biome queries with configurable step size
 - **Memory Usage**: ~700 bytes per player (negligible)
 - **Disk Usage**: ~200 bytes per player (minimal)
 
@@ -391,7 +431,17 @@ Distance: 2,134 blocks
 *Boss bar shows: "Ancient City - 234 blocks"*  
 *You're close! Start digging down (ancient cities are underground)*
 
-### Example 3: Exploration Mode
+### Example 3: Finding a Cherry Grove
+```bash
+> /enhancedcompass biome cherry_grove
+Searching for nearest Cherry Grove biome...
+Compass now pointing to Cherry Grove biome!
+Distance: 1,245 blocks
+```
+*Boss bar appears: "Cherry Grove - 1,245 blocks"*  
+*Follow the compass to find beautiful pink trees!*
+
+### Example 4: Exploration Mode
 ```bash
 > /enhancedcompass anything
 Searching for nearest structure of any type...
@@ -400,11 +450,17 @@ Compass now pointing to Mineshaft!
 Distance: 456 blocks
 ```
 
-### Example 4: Checking Your Target
+### Example 5: Checking Your Target
 ```bash
 > /enhancedcompass current
-Current target: Stronghold
+Current target (Structure): Stronghold
 Distance: 3,421 blocks
+```
+or
+```bash
+> /enhancedcompass current
+Current target (Biome): Dark Forest
+Distance: 678 blocks
 ```
 
 ---
@@ -413,11 +469,12 @@ Distance: 3,421 blocks
 
 ### Survival Servers
 - Enable common structures (villages, temples)
-- Disable rare structures (strongholds, ancient cities) to maintain challenge
+- Enable common biomes (forests, deserts)
+- Disable rare targets (strongholds, ancient cities, mushroom fields) to maintain challenge
 - Set reasonable search radius (50-100 chunks)
 
 ### Creative Servers
-- Enable all structures for easy access
+- Enable all structures and biomes for easy access
 - Large search radius (150-200 chunks)
 - Great for builders finding specific biomes/structures
 
@@ -428,7 +485,7 @@ Distance: 3,421 blocks
 
 ### SMP Servers
 - Balanced configuration for fair gameplay
-- Enable villages and common structures
+- Enable villages and common structures/biomes
 - Disable or limit stronghold searches to maintain End portal challenge
 
 ---
@@ -437,12 +494,12 @@ Distance: 3,421 blocks
 
 ### Planned Features
 
-- [ ] GUI interface for structure selection
+- [ ] GUI interface for structure/biome selection
 - [ ] Multiple waypoint system
 - [ ] Party/guild shared targets
 - [ ] Statistics and leaderboards
 - [ ] Economy integration (costs per search)
-- [ ] Cooldown system (configurable per structure)
+- [ ] Cooldown system (configurable per target)
 - [ ] Custom structure support
 - [ ] Distance limits per permission
 - [ ] Search history per player
@@ -462,7 +519,7 @@ Have an idea? Create a GitHub issue with the "enhancement" label!
 ## 🏆 Credits
 
 **Author:** SupaFloof Games, LLC  
-**Version:** 1.0.0  
+**Version:** 1.1.0  
 **Built With:**
 - [Paper API](https://papermc.io/)
 - [Adventure API](https://docs.advntr.dev/)
