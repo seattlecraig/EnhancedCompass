@@ -2,25 +2,27 @@
 
 ## What is EnhancedCompass?
 
-EnhancedCompass is a plugin that supercharges your Minecraft compass! Instead of just pointing to your spawn point, your compass can now point to **any structure** or **any biome** in the game - ancient cities, villages, strongholds, End cities, dark forests, cherry groves, and more!
+EnhancedCompass transforms your Minecraft compass into a powerful navigation tool. Instead of just pointing to your spawn point, your compass can now point to **any structure** or **any biome** in the game—ancient cities, villages, strongholds, End cities, dark forests, cherry groves, and more.
 
-Even better, when you hold your compass, a **boss bar** appears at the top of your screen showing you the target name and exactly how far away it is in real-time. Watch the distance count down as you get closer!
+When you hold your compass, a **boss bar** appears at the top of your screen showing the target name and exactly how far away it is. The distance updates in real-time every half second as you travel, so you can watch the count go down as you get closer.
 
 ---
 
-## How to Activate The /enchancedcompass (or /ecompass) Command
+## How to Unlock EnhancedCompass
 
-It is a perk onlocked by buying and using a Perk Key at https://pixels.supafloof.com
+The `/enhancedcompass` command (or `/ecompass`) is a perk unlocked by purchasing and using a Perk Key at https://pixels.supafloof.com
 
-## Features at a Glance
+---
 
-✨ **Point to Any Structure**: Find villages, temples, strongholds, ancient cities, and more  
-🌲 **Point to Any Biome**: Find dark forests, cherry groves, mushroom fields, and more  
-📏 **Real-Time Distance**: Boss bar shows your distance to the target as you travel  
-🌍 **All Dimensions**: Works in Overworld, Nether, and End  
-🔍 **Smart Search**: Special commands to find ANY village or ANY nearby structure  
-💾 **Remembers Your Target**: Your compass keeps pointing to your target even after logout  
-🎯 **Easy to Use**: Simple commands with auto-complete
+## Features
+
+- **Point to Any Structure**: Find villages, temples, strongholds, ancient cities, and more
+- **Point to Any Biome**: Find dark forests, cherry groves, mushroom fields, and more
+- **Real-Time Distance**: Boss bar shows distance to target, updating every 0.5 seconds
+- **All Dimensions**: Works in Overworld, Nether, and End
+- **Smart Searches**: Special commands to find ANY village or ANY nearby structure
+- **Persistent Targets**: Your compass keeps pointing to your target even after logout
+- **Tab Completion**: Auto-complete for all commands, structure names, and biome names
 
 ---
 
@@ -31,23 +33,17 @@ It is a perk onlocked by buying and using a Perk Key at https://pixels.supafloof
 1. **Hold a compass** in your main hand or off hand
 2. **Run a search command** to find a structure or biome
 3. **A boss bar appears** showing the target and distance
-4. **Follow your compass** - it points directly to the target!
+4. **Follow your compass**—it points directly to the target
 
 ### Your First Search
 
-Let's find the nearest village:
+Find the nearest village:
 
 ```
 /enhancedcompass village
 ```
 
-The plugin will:
-- Search for all types of villages (plains, desert, snowy, etc.)
-- Find the closest one
-- Point your compass to it
-- Show you the distance
-
-Now just hold your compass and follow it! The boss bar will update every half second showing your distance.
+The plugin will search for all types of villages (plains, desert, snowy, savanna, taiga), find the closest one, point your compass to it, and show you the distance. Hold your compass and follow it—the boss bar updates in real-time.
 
 ---
 
@@ -55,18 +51,16 @@ Now just hold your compass and follow it! The boss bar will update every half se
 
 ### Main Commands
 
-| Command | Description | Example |
-|---------|-------------|---------|
-| `/enhancedcompass help` | Shows the help menu | `/enhancedcompass help` |
-| `/enhancedcompass <structure>` | Points compass to nearest structure | `/enhancedcompass ancient_city` |
-| `/enhancedcompass biome <biome>` | Points compass to nearest biome | `/enhancedcompass biome dark_forest` |
-| `/enhancedcompass village` | Finds nearest village of ANY type | `/enhancedcompass village` |
-| `/enhancedcompass anything` | Finds nearest structure of ANY type | `/enhancedcompass anything` |
-| `/enhancedcompass current` | Shows your current target | `/enhancedcompass current` |
+| Command | Description |
+|---------|-------------|
+| `/enhancedcompass help` | Shows the help menu |
+| `/enhancedcompass <structure>` | Points compass to nearest structure |
+| `/enhancedcompass biome <biome>` | Points compass to nearest biome |
+| `/enhancedcompass village` | Finds nearest village of ANY type |
+| `/enhancedcompass anything` | Finds nearest structure of ANY type |
+| `/enhancedcompass current` | Shows your current target and distance |
 
 ### Structure Examples
-
-Here are some popular structures you can search for:
 
 **Overworld:**
 ```
@@ -75,9 +69,13 @@ Here are some popular structures you can search for:
 /enhancedcompass village_plains
 /enhancedcompass mansion
 /enhancedcompass monument
-/enhancedcompass temple_desert
+/enhancedcompass desert_pyramid
+/enhancedcompass jungle_pyramid
 /enhancedcompass mineshaft
 /enhancedcompass shipwreck
+/enhancedcompass buried_treasure
+/enhancedcompass trail_ruins
+/enhancedcompass trial_chambers
 ```
 
 **Nether:**
@@ -93,8 +91,6 @@ Here are some popular structures you can search for:
 
 ### Biome Examples
 
-Here are some popular biomes you can search for:
-
 **Overworld:**
 ```
 /enhancedcompass biome dark_forest
@@ -108,6 +104,7 @@ Here are some popular biomes you can search for:
 /enhancedcompass biome flower_forest
 /enhancedcompass biome mangrove_swamp
 /enhancedcompass biome pale_garden
+/enhancedcompass biome meadow
 ```
 
 **Nether:**
@@ -124,7 +121,7 @@ Here are some popular biomes you can search for:
 /enhancedcompass biome small_end_islands
 ```
 
-**Pro Tip:** Use tab completion! Start typing a structure or biome name and press TAB to see all available options for your current dimension.
+Use **tab completion** to see all available structures and biomes for your current dimension.
 
 ---
 
@@ -132,42 +129,34 @@ Here are some popular biomes you can search for:
 
 ### The "Village" Search
 
-Can't remember all the village types? No problem!
+Can't remember all the village types? No problem:
 
 ```
 /enhancedcompass village
 ```
 
-This searches for:
-- village_plains
-- village_desert
-- village_savanna
-- village_snowy
-- village_taiga
-
-...and finds whichever one is closest to you!
+This searches for village_plains, village_desert, village_savanna, village_snowy, and village_taiga simultaneously and finds whichever one is closest to you.
 
 ### The "Anything" Search
 
-Feeling adventurous? Want to find the nearest structure without caring what it is?
+Feeling adventurous?
 
 ```
 /enhancedcompass anything
 ```
 
-This searches for **every enabled structure type** in your current dimension and points you to the absolute closest one. Perfect for exploration!
+This searches for **every enabled structure type** in your current dimension and points you to the absolute closest one. Perfect for random exploration.
 
 ---
 
 ## Understanding the Boss Bar
 
-When you hold a compass with a target set, a boss bar appears at the top of your screen:
+When you hold a compass with a target set, a boss bar appears at the top of your screen.
 
 ### Same Dimension
 ```
 Ancient City - 1,432 blocks
 ```
-or
 ```
 Dark Forest - 523 blocks
 ```
@@ -179,14 +168,14 @@ Dark Forest - 523 blocks
 End City - Not in same dimension
 ```
 - **Red target name** = Target is in a different dimension
-- **Red warning message** = You need to change dimensions
+- **Red warning** = You need to change dimensions
 
 ### Boss Bar Behavior
 
-- ✅ **Appears** when you hold a compass (main or off hand)
-- ✅ **Updates** every 0.5 seconds while you hold the compass
-- ✅ **Disappears** when you put the compass away
-- ✅ **Persists** when switching between hands
+- Appears when you hold a compass (main or off hand)
+- Updates every 0.5 seconds while you hold the compass
+- Disappears when you put the compass away
+- Persists when switching between hands
 
 ---
 
@@ -206,7 +195,7 @@ End City - Not in same dimension
 
 ### Distance Strategy
 
-- The compass shows straight-line distance (as the crow flies)
+- Distance shown is straight-line distance (as the crow flies)
 - Actual travel distance may be longer due to terrain
 - Y-level (height) is included in distance calculations
 - For underground targets like ancient cities or deep dark biomes, you may need to dig down when you get close
@@ -220,127 +209,55 @@ If you set a target in the Overworld, then go to the Nether:
 
 ### Persistent Targets
 
-Your compass target is automatically saved! It will still be set even if you:
+Your compass target is automatically saved. It stays set even if you:
 - Log out and back in
+- Die and respawn
 - The server restarts
-- You die and respawn
 
 To change your target, simply run a new search command.
 
 ---
 
-## Troubleshooting
-
-### "You don't have permission to use enhanced compass features"
-
-Your server has permission restrictions enabled. Ask an admin for the `enhancedcompass.use` permission.
-
-### "Enhanced compass is disabled in this world"
-
-The server admin has disabled the compass in this world. This is common in lobby worlds or special game areas.
-
-### "This structure type is not enabled in the current world type"
-
-The structure you searched for either:
-- Doesn't exist in your current dimension (e.g., searching for fortress in the Overworld)
-- Has been disabled by the server admin
-
-Try using tab completion to see what structures are available in your dimension.
-
-### "This biome type is not enabled in the current world type"
-
-The biome you searched for either:
-- Doesn't exist in your current dimension (e.g., searching for crimson_forest in the Overworld)
-- Has been disabled by the server admin
-
-Try using tab completion to see what biomes are available in your dimension.
-
-### "No [structure/biome] found within X blocks"
-
-The target wasn't found within the search radius. This could mean:
-- The target is farther away
-- The target doesn't exist in your world (rare)
-- Try searching for a different target
-
-### Boss bar isn't showing
-
-Make sure you're:
-1. Actually holding a compass (check both hands)
-2. Have set a target with a search command
-3. Have the `enhancedcompass.use` permission
-
-
----
-
 ## Examples & Scenarios
 
-### Scenario 1: Finding a Village to Trade
+### Finding a Village to Trade
 ```
 /enhancedcompass village
 ```
-*Compass points to nearest village. Boss bar shows: "Village Plains - 892 blocks"*
+Boss bar appears: "Village Plains - 892 blocks"
 
-### Scenario 2: Finding an Ancient City
+### Finding an Ancient City
 ```
 /enhancedcompass ancient_city
 ```
-*Boss bar appears: "Ancient City - 2,134 blocks"*  
-*Travel toward the compass direction, digging down when close*
+Boss bar appears: "Ancient City - 2,134 blocks"  
+Travel toward the compass direction, digging down when close.
 
-### Scenario 3: Finding a Cherry Grove
+### Finding a Cherry Grove
 ```
 /enhancedcompass biome cherry_grove
 ```
-*Boss bar appears: "Cherry Grove - 1,876 blocks"*  
-*Follow the compass to find beautiful pink trees!*
+Boss bar appears: "Cherry Grove - 1,876 blocks"  
+Follow the compass to find beautiful pink trees.
 
-### Scenario 4: Exploration Mode
+### Exploration Mode
 ```
 /enhancedcompass anything
 ```
-*Could find a mineshaft, temple, mansion, or any other nearby structure!*
+Could find a mineshaft, temple, mansion, or any other nearby structure.
 
-### Scenario 5: Checking Your Target
+### Checking Your Target
 ```
 /enhancedcompass current
 ```
-*Output: "Current target (Structure): Stronghold - Distance: 3,421 blocks"*
-*or: "Current target (Biome): Dark Forest - Distance: 456 blocks"*
+Output: "Current target: Stronghold" and "Distance: 3,421 blocks"
 
-### Scenario 6: Finding Rare Biomes
+### Finding Rare Biomes
 ```
 /enhancedcompass biome mushroom_fields
 ```
-*Boss bar appears: "Mushroom Fields - 4,521 blocks"*  
-*Rare biomes may be far away, but you'll get there!*
-
----
-
-## Frequently Asked Questions
-
-**Q: Does this work with modded structures?**  
-A: The plugin uses Minecraft's built-in structure system, so it depends on whether the mod properly registers structures with Minecraft.
-
-**Q: Does this work with modded biomes?**  
-A: Yes, as long as the mod registers biomes properly with Minecraft's registry.
-
-**Q: Can I have multiple targets?**  
-A: No, you can only have one target at a time. Setting a new target replaces the old one.
-
-**Q: Does this consume my compass?**  
-A: No! The compass is never consumed. You can use any compass, even an enchanted one.
-
-**Q: Will this help me find buried treasure?**  
-A: Yes! Try `/enhancedcompass buried_treasure` 
-
-**Q: Can I find the deep dark biome?**  
-A: Yes! Try `/enhancedcompass biome deep_dark`
-
-**Q: What if I can't find the structure/biome when I get there?**  
-A: Some targets are underground or underwater. The compass points to the target center, but you may need to explore the area.
-
-**Q: Can other players see my boss bar?**  
-A: No, the boss bar is personal to you. Other players won't see it.
+Boss bar appears: "Mushroom Fields - 4,521 blocks"  
+Rare biomes may be far away, but you'll get there.
 
 ---
 
@@ -355,16 +272,9 @@ A: No, the boss bar is personal to you. Other players won't see it.
 /enhancedcompass current               # Show current target
 ```
 
-Press TAB while typing for auto-completion!
+Press TAB while typing for auto-completion.
 
 ---
-
-## Need More Help?
-
-- Use `/enhancedcompass help` in-game
-- Ask your server administrators
-- Check if certain structures or biomes are disabled on your server
-- Make sure you have the correct permissions
 
 Happy exploring! 🧭
 

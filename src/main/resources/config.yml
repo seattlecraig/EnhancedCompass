@@ -33,6 +33,7 @@ enabled-structures:
     stronghold: true
     swamp_hut: true
     trail_ruins: true
+    trial_chambers: true
     village_desert: true
     village_plains: true
     village_savanna: true

@@ -8,17 +8,18 @@ EnhancedCompass is a Paper/Spigot plugin that enhances the vanilla compass by al
 
 ## Features
 
-- ✅ **Permission-Based Access Control** - Fine-grained permission system
-- ✅ **Multi-Dimension Support** - Works in Overworld, Nether, and End
-- ✅ **Configurable Structure Whitelist** - Control which structures can be found per dimension
-- ✅ **Configurable Biome Whitelist** - Control which biomes can be found per dimension
-- ✅ **Configurable Search Radius** - Limit how far structure/biome searches extend
-- ✅ **World Blacklist** - Disable plugin in specific worlds (lobbies, minigames, etc.)
-- ✅ **Real-Time Distance Display** - Boss bar updates every 0.5 seconds
-- ✅ **Player Data Persistence** - Targets saved across sessions
-- ✅ **Hot Reload** - Configuration changes without restart
-- ✅ **Generic Searches** - "village" and "anything" searches for convenience
-- ✅ **Tab Completion** - Full auto-completion for all commands
+- **Permission-Based Access Control** - Fine-grained permission system
+- **Multi-Dimension Support** - Works in Overworld, Nether, and End
+- **Configurable Structure Whitelist** - Control which structures can be found per dimension
+- **Configurable Biome Whitelist** - Control which biomes can be found per dimension
+- **Configurable Search Radius** - Limit how far searches extend (in chunks)
+- **World Blacklist** - Disable plugin in specific worlds (lobbies, minigames, etc.)
+- **Real-Time Distance Display** - Boss bar updates every 0.5 seconds
+- **Player Data Persistence** - Targets saved when set and on player logout
+- **Hot Reload** - Configuration changes without server restart
+- **Generic Searches** - "village" and "anything" searches for convenience
+- **Tab Completion** - Full auto-completion for all commands
+- **Asynchronous Biome Searches** - Biome searches run off the main thread to prevent lag
 
 ---
 
@@ -26,8 +27,8 @@ EnhancedCompass is a Paper/Spigot plugin that enhances the vanilla compass by al
 
 ### Server Requirements
 - **Paper** or **Spigot** server (Paper recommended)
-- **Minecraft Version**: 1.19+ (any version with modern structure system)
-- **Java**: Java 17+ (matches your server version requirement)
+- **Minecraft Version**: 1.19+ (requires Bukkit Registry API)
+- **Java**: Java 17+
 
 ### Dependencies
 - No external dependencies required
@@ -50,7 +51,7 @@ EnhancedCompass is a Paper/Spigot plugin that enhances the vanilla compass by al
 
 ## Configuration
 
-### Default Config Location
+### File Location
 ```
 plugins/EnhancedCompass/config.yml
 ```
@@ -60,7 +61,7 @@ plugins/EnhancedCompass/config.yml
 ```yaml
 # Search radius in chunks (1 chunk = 16 blocks)
 # Default: 100 chunks = 1,600 blocks
-# Higher values = find structures/biomes farther away but slower searches
+# Higher values find structures/biomes farther away but searches take longer
 search-radius: 100
 
 # Worlds where the plugin is completely disabled
@@ -78,8 +79,6 @@ enabled-structures:
     ancient_city: true
     buried_treasure: true
     desert_pyramid: true
-    end_city: false  # Not in overworld
-    fortress: false  # Not in overworld
     igloo: true
     jungle_pyramid: true
     mansion: true
@@ -93,7 +92,6 @@ enabled-structures:
     ruined_portal_desert: true
     ruined_portal_jungle: true
     ruined_portal_mountain: true
-    ruined_portal_nether: false  # Not in overworld
     ruined_portal_ocean: true
     ruined_portal_swamp: true
     shipwreck: true
@@ -199,7 +197,7 @@ enabled-biomes:
 
 ---
 
-## Configuration Options Explained
+## Configuration Options
 
 ### search-radius
 
@@ -207,18 +205,15 @@ enabled-biomes:
 **Default:** 100  
 **Unit:** Chunks (multiply by 16 for blocks)
 
-Controls how far structure and biome searches will extend from the player's location.
+Controls how far structure and biome searches extend from the player's location.
 
-- **Lower values** (25-50): Faster searches, but may not find targets
-- **Medium values** (50-100): Balanced performance and success rate
-- **Higher values** (100-200): Finds distant targets but slower searches
+| Value Range | Performance | Success Rate |
+|-------------|-------------|--------------|
+| 25-50 | Fast searches | May not find distant targets |
+| 50-100 | Balanced | Good success rate |
+| 100-200 | Slower searches | Finds distant targets |
 
-**Performance Impact:** Higher values can cause lag when targets are searched. Consider server performance when setting this value.
-
-**Example:**
-```yaml
-search-radius: 100  # Searches up to 1,600 blocks away
-```
+**Note:** Structure searches use Bukkit's `World.locateNearestStructure()` which is optimized. Biome searches run asynchronously with a step size of 32 blocks to prevent lag.
 
 ---
 
@@ -232,8 +227,7 @@ Worlds where the plugin is completely disabled. Players in these worlds cannot u
 **Use Cases:**
 - Lobby worlds where compass shouldn't work
 - Minigame arenas with custom mechanics
-- Creative worlds where structure finding would be cheating
-- Plot worlds where navigation isn't needed
+- Creative worlds where structure finding would be unfair
 
 **Example:**
 ```yaml
@@ -241,7 +235,6 @@ blacklisted-worlds:
   - lobby
   - minigames
   - creative
-  - plotworld
 ```
 
 **Note:** World names are case-sensitive and must match exactly.
@@ -253,44 +246,39 @@ blacklisted-worlds:
 **Type:** Nested Map  
 **Structure:** `dimension` → `structure_name` → `boolean`
 
-Controls which structures can be found in each dimension. This provides granular control over gameplay balance.
+Controls which structures can be found in each dimension.
 
 **Dimensions:**
 - `normal` - Overworld structures
 - `nether` - Nether structures
 - `the_end` - End structures
 
-**Balancing Considerations:**
+**Balancing Examples:**
 
-**Easy Mode (All Enabled):**
+**All Enabled (Easy):**
 ```yaml
 normal:
   stronghold: true
   ancient_city: true
   mansion: true
-  # ... everything true
 ```
-Players can find anything easily. Good for casual/creative servers.
 
-**Balanced Mode (Selective):**
+**Selective (Balanced):**
 ```yaml
 normal:
-  stronghold: false      # Make finding rare
-  ancient_city: false    # Make finding rare
-  village_plains: true   # Common structures OK
-  temple_desert: true
+  stronghold: false
+  ancient_city: false
+  village_plains: true
+  desert_pyramid: true
 ```
-Rare structures require exploration. Good for survival servers.
 
-**Hard Mode (Minimal):**
+**Minimal (Hard):**
 ```yaml
 normal:
-  village_plains: true   # Only villages allowed
+  village_plains: true
   village_desert: true
-  village_snowy: true
   # Everything else false
 ```
-Players can find villages but must explore for other structures. Good for hardcore servers.
 
 ---
 
@@ -299,79 +287,35 @@ Players can find villages but must explore for other structures. Good for hardco
 **Type:** Nested Map  
 **Structure:** `dimension` → `biome_name` → `boolean`
 
-Controls which biomes can be found in each dimension. This provides granular control over biome searching.
+Controls which biomes can be found in each dimension.
 
 **Dimensions:**
 - `normal` - Overworld biomes
 - `nether` - Nether biomes
 - `the_end` - End biomes
 
-**Biome Name Reference:**
-
-**Overworld Common:**
-- `plains`, `forest`, `taiga`, `desert`, `savanna`
-- `beach`, `river`, `ocean`, `swamp`
-
-**Overworld Rare/Special:**
-- `mushroom_fields` - Rare, no hostile mobs
-- `cherry_grove` - New biome with pink trees
-- `deep_dark` - Contains ancient cities
-- `lush_caves` - Underground, contains axolotls
-- `ice_spikes` - Rare frozen biome
-- `badlands` - Mesa/terracotta biome
-- `pale_garden` - New biome with pale wood
-
-**Nether:**
-- `nether_wastes` - Default nether
-- `crimson_forest` - Red fungus forest
-- `warped_forest` - Blue fungus forest
-- `soul_sand_valley` - Soul sand and skeletons
-- `basalt_deltas` - Basalt and magma cubes
-
-**End:**
-- `the_end` - Main end island
-- `end_highlands` - End cities generate here
-- `end_midlands` - Mid-level end islands
-- `small_end_islands` - Small outer islands
-- `end_barrens` - Empty end areas
-
 ---
 
 ## Permissions
 
-### Permission Nodes
+| Permission | Description | Default |
+|------------|-------------|---------|
+| `enhancedcompass.use` | Use all compass features | op |
+| `enhancedcompass.reload` | Reload configuration | op |
 
-| Permission | Default | Description |
-|------------|---------|-------------|
-| `enhancedcompass.use` | op | Use all compass features (searching structures/biomes, viewing targets) |
-| `enhancedcompass.reload` | op | Reload the configuration file |
+### Setting Up Permissions
 
-### Permission Setup Examples
-
-**All Players Can Use:**
-```yaml
-permissions:
-  enhancedcompass.use:
-    default: true
-```
-
-**Only Specific Rank:**
-```yaml
-groups:
-  member:
-    permissions:
-      - enhancedcompass.use
-  
-  admin:
-    permissions:
-      - enhancedcompass.use
-      - enhancedcompass.reload
-```
-
-**Using LuckPerms:**
+**LuckPerms (grant to all players):**
 ```
 /lp group default permission set enhancedcompass.use true
-/lp group admin permission set enhancedcompass.reload true
+```
+
+**PermissionsEx:**
+```yaml
+groups:
+  default:
+    permissions:
+      - enhancedcompass.use
 ```
 
 ---
@@ -380,148 +324,76 @@ groups:
 
 ### Player Commands
 
-| Command | Permission | Description |
-|---------|------------|-------------|
-| `/enhancedcompass help` | enhancedcompass.use | Show help menu |
-| `/enhancedcompass <structure>` | enhancedcompass.use | Find specific structure |
-| `/enhancedcompass biome <biome>` | enhancedcompass.use | Find specific biome |
-| `/enhancedcompass village` | enhancedcompass.use | Find any village type |
-| `/enhancedcompass anything` | enhancedcompass.use | Find any enabled structure |
-| `/enhancedcompass current` | enhancedcompass.use | Show current target |
+| Command | Description |
+|---------|-------------|
+| `/enhancedcompass help` | Show help menu |
+| `/enhancedcompass <structure>` | Find specific structure |
+| `/enhancedcompass biome <biome>` | Find specific biome |
+| `/enhancedcompass village` | Find any village type |
+| `/enhancedcompass anything` | Find any enabled structure |
+| `/enhancedcompass current` | Show current target and distance |
 
 ### Admin Commands
 
-| Command | Permission | Description |
-|---------|------------|-------------|
-| `/enhancedcompass reload` | enhancedcompass.reload | Reload configuration |
+| Command | Description |
+|---------|-------------|
+| `/enhancedcompass reload` | Reload configuration |
 
-**Note:** The reload command works from both console and in-game (with permission).
-
----
-
-## Console Usage
-
-### Reload Configuration
+**Console Usage:**
 ```
 enhancedcompass reload
 ```
-No permission required from console. Reloads config.yml and applies changes immediately.
-
-### Viewing Plugin Status
-Check console on server startup for:
-```
-[EnhancedCompass] EnhancedCompass Started!
-[EnhancedCompass] By SupaFloof Games, LLC
-```
 
 ---
 
-## Player Data Storage
+## File Structure
 
-### Storage Location
 ```
-plugins/EnhancedCompass/playerdata/
-```
-
-### File Format
-Each player gets a UUID.yml file:
-```
-plugins/EnhancedCompass/playerdata/550e8400-e29b-41d4-a716-446655440000.yml
+plugins/EnhancedCompass/
+├── config.yml           # Main configuration
+└── playerdata/          # Player target data
+    ├── uuid1.yml        # Per-player target files
+    ├── uuid2.yml
+    └── ...
 ```
 
-### File Contents
+### Player Data File Format
+
 ```yaml
-target-type: STRUCTURE
-target-name: ANCIENT_CITY
+structure-type: ANCIENT_CITY
 world: world
 x: 123.456
 y: -45.0
 z: 789.012
 ```
 
-Or for biome targets:
-```yaml
-target-type: BIOME
-target-name: DARK_FOREST
-world: world
-x: 456.789
-y: 64.0
-z: 123.456
-```
-
-### Data Lifecycle
-- **Created:** When player first sets a compass target
-- **Updated:** Every time player sets a new target
-- **Loaded:** When player joins server
-- **Deleted:** Manual deletion only (not automatic)
-
-### Data Management
-
-**View a Player's Target:**
-```bash
-cat plugins/EnhancedCompass/playerdata/<uuid>.yml
-```
-
-**Clear a Player's Target:**
-```bash
-rm plugins/EnhancedCompass/playerdata/<uuid>.yml
-```
-
-**Clear All Player Targets:**
-```bash
-rm plugins/EnhancedCompass/playerdata/*.yml
-```
-
-**Backup Player Data:**
-```bash
-cp -r plugins/EnhancedCompass/playerdata/ backups/enhancedcompass-playerdata-$(date +%Y%m%d)/
-```
-
 ---
 
-## Performance Considerations
+## Performance
 
 ### Boss Bar Updates
-
-The plugin updates boss bars every 10 ticks (0.5 seconds) for all players holding compasses.
-
-**Performance Impact:**
-- Minimal for small servers (<50 players)
-- Low for medium servers (50-200 players)
-- Consider impact on large servers (200+ players)
-
-**Optimization:**
-- Boss bars only update for players actually holding compasses
-- Distance calculations are simple and fast
-- No database queries during updates
+- Runs every 10 ticks (0.5 seconds)
+- Only processes players actively holding a compass
+- O(n) where n = players holding compass
 
 ### Structure Searches
-
-**What Happens During a Search:**
-1. Bukkit queries world generation data
-2. Search extends up to configured radius
-3. May cause brief lag spike for large search radius
+- Uses Bukkit's `World.locateNearestStructure()` API
+- Runs synchronously (API is already optimized)
 
 ### Biome Searches
-
-**What Happens During a Search:**
-1. World.locateNearestBiome() is called
-2. Search extends up to configured radius in blocks
-3. Uses step size of 8 blocks for reasonable performance
-
-**Optimization Tips:**
-- Keep search-radius reasonable (50-100 chunks)
-- Disable rarely-used structures/biomes to reduce search scope
-- Consider adding cooldowns via external plugins if needed
+- Uses Bukkit's `World.locateNearestBiome()` API
+- Runs **asynchronously** to prevent server lag
+- Step size of 32 blocks (matches vanilla `/locate biome` resolution)
 
 ### Memory Usage
 
-**Per Player:**
-- 1 CompassTarget object (~100 bytes)
-- 1 BossBar object (~500 bytes)
-- 1 YAML file on disk (~200 bytes)
+| Item | Per Player |
+|------|------------|
+| CompassTarget object | ~100 bytes |
+| BossBar object | ~500 bytes |
+| YAML file on disk | ~200 bytes |
 
-**Total:** Negligible even for large servers
+**Total for 1000 players:** ~800 KB (negligible)
 
 ---
 
@@ -529,84 +401,61 @@ The plugin updates boss bars every 10 ticks (0.5 seconds) for all players holdin
 
 ### Players Can't Use Commands
 
-**Symptoms:** "You don't have permission to use enhanced compass features"
+**Symptom:** "You don't have permission to use enhanced compass features"
 
 **Solutions:**
 1. Grant `enhancedcompass.use` permission
-2. Check permission plugin is working correctly
-3. Verify player is not in blacklisted world
-4. Check server console for errors
+2. Verify permission plugin is working
+3. Check player is not in blacklisted world
 
-### Structures Not Found
+### Structures/Biomes Not Found
 
-**Symptoms:** "No [structure] found within X blocks"
-
-**Possible Causes:**
-1. **Structure disabled in config** - Enable it in enabled-structures section
-2. **Search radius too small** - Increase search-radius value
-3. **Structure doesn't generate in this world** - Check world generator settings
-4. **Wrong dimension** - Some structures only spawn in specific dimensions
-
-**Solutions:**
-1. Increase search-radius in config
-2. Enable more structure types
-3. Use `/enhancedcompass anything` to find any nearby structure
-4. Check world is properly generated (not void/flat/custom)
-
-### Biomes Not Found
-
-**Symptoms:** "No [biome] biome found within X blocks"
+**Symptom:** "No [target] found within X blocks"
 
 **Possible Causes:**
-1. **Biome disabled in config** - Enable it in enabled-biomes section
-2. **Search radius too small** - Increase search-radius value
-3. **Biome is very rare** - Some biomes like mushroom_fields are extremely rare
-4. **Wrong dimension** - Some biomes only spawn in specific dimensions
+1. Target disabled in config
+2. Search radius too small
+3. Target doesn't exist in current dimension
+4. Target doesn't generate in this world type
 
 **Solutions:**
-1. Increase search-radius in config
-2. Enable more biome types
-3. Try a different biome that's more common
-4. Check world generator isn't blocking certain biomes
+1. Enable target in config
+2. Increase search-radius
+3. Try searching in correct dimension
+4. Use tab completion to see available targets
 
 ### Boss Bar Not Showing
 
-**Symptoms:** Commands work but no boss bar appears
+**Symptom:** Commands work but no boss bar appears
 
 **Causes:**
 1. Player not holding compass
 2. Player doesn't have target set
-3. Client-side resource pack conflict
+3. Player lacks permission
 
 **Solutions:**
-1. Make sure player is holding compass in either hand
-2. Run a structure or biome search command first
-3. Try relogging
-4. Check client doesn't have boss bar disabled
+1. Hold compass in main or off hand
+2. Run a search command first
+3. Grant `enhancedcompass.use` permission
 
 ### Config Not Reloading
 
-**Symptoms:** Changes to config.yml don't take effect
-
 **Solutions:**
-1. Run `/enhancedcompass reload` (or `enhancedcompass reload` from console)
-2. Restart server if reload fails
-3. Check config.yml syntax is valid YAML
-4. Check console for configuration errors
+1. Run `/enhancedcompass reload`
+2. Verify config.yml is valid YAML syntax
+3. Check console for errors
+4. Restart server if reload fails
 
 ### Plugin Not Loading
 
-**Symptoms:** Plugin doesn't appear in `/plugins` list
-
 **Causes:**
-1. Wrong server type (needs Paper/Spigot)
+1. Wrong server type (needs Paper/Spigot 1.19+)
 2. Wrong Java version
 3. Corrupted JAR file
-4. Dependency conflict
 
 **Solutions:**
-1. Verify server is Paper or Spigot (1.19+)
-2. Check Java version matches server requirements
+1. Verify server is Paper or Spigot 1.19+
+2. Check Java 17+ is installed
 3. Re-download plugin JAR
 4. Check console for startup errors
 
@@ -617,29 +466,21 @@ The plugin updates boss bars every 10 ticks (0.5 seconds) for all players holdin
 ### Configuration
 
 1. **Start Conservative**: Begin with moderate search-radius (50-100)
-2. **Test Before Production**: Try config changes on test server first
-3. **Balance Gameplay**: Consider disabling structures/biomes that would trivialize progression
-4. **Document Changes**: Keep notes on why certain targets are disabled
+2. **Test First**: Try config changes on test server
+3. **Balance Gameplay**: Disable structures/biomes that would trivialize progression
+4. **Document Changes**: Note why certain targets are disabled
 
 ### Permission Management
 
-1. **Default Allow**: Grant enhancedcompass.use to all players by default
-2. **Restrict Admin Commands**: Keep enhancedcompass.reload for staff only
-3. **World-Specific Rules**: Use world blacklist rather than per-world permissions
+1. **Default Allow**: Grant `enhancedcompass.use` to all players by default
+2. **Restrict Admin**: Keep `enhancedcompass.reload` for staff only
+3. **Use World Blacklist**: Prefer world blacklist over per-world permissions
 
 ### Maintenance
 
-1. **Regular Backups**: Back up playerdata folder regularly
-2. **Monitor Performance**: Watch for lag spikes after large player groups search
-3. **Update Regularly**: Keep plugin updated for bug fixes and new features
-4. **Clean Old Data**: Periodically remove data for players who haven't joined in months
-
-### Player Support
-
-1. **Provide Documentation**: Link players to end user guide
-2. **Set Expectations**: Tell players which structures/biomes are enabled/disabled
-3. **Explain Limits**: Inform players about search radius limits
-4. **Handle Reports**: Respond to "not found" reports with search radius info
+1. **Regular Backups**: Back up playerdata folder
+2. **Clean Old Data**: Remove data for inactive players periodically
+3. **Monitor Performance**: Watch for issues with large search radius values
 
 ---
 
@@ -647,33 +488,16 @@ The plugin updates boss bars every 10 ticks (0.5 seconds) for all players holdin
 
 ### Compatible Plugins
 
-- ✅ **Essentials** - No conflicts
-- ✅ **WorldGuard** - No conflicts (respects region protections)
-- ✅ **Multiverse** - Works with multiple worlds
-- ✅ **LuckPerms** - Full permission support
-- ✅ **Vault** - Not required, no economy integration
-- ✅ **Dynmap** - No conflicts
+- **Essentials** - No conflicts
+- **WorldGuard** - No conflicts
+- **Multiverse** - Works with multiple worlds
+- **LuckPerms** - Full permission support
+- **Dynmap** - No conflicts
 
 ### Potential Conflicts
 
-- ⚠️ **Custom Compass Plugins** - May conflict with other plugins that modify compass behavior
-- ⚠️ **Custom Boss Bar Plugins** - May cause visual overlap if both show boss bars simultaneously
-
-### Recommended Combinations
-
-**Exploration Server:**
-```
-- EnhancedCompass (for structure/biome finding)
-- Dynmap (for mapping)
-- BlueMap (for web map)
-```
-
-**Survival Server:**
-```
-- EnhancedCompass (limited structures/biomes)
-- Essentials (for /home, /spawn)
-- GriefPrevention (for land protection)
-```
+- **Custom Compass Plugins** - May conflict with plugins that modify compass behavior
+- **Custom Boss Bar Plugins** - May cause visual overlap
 
 ---
 
@@ -681,26 +505,11 @@ The plugin updates boss bars every 10 ticks (0.5 seconds) for all players holdin
 
 ### Update Process
 
-1. **Backup** current config and playerdata:
-   ```bash
-   cp -r plugins/EnhancedCompass/ backups/
-   ```
-
+1. **Backup** current config and playerdata
 2. **Download** new version
-
-3. **Replace** JAR file:
-   ```bash
-   mv EnhancedCompass.jar plugins/
-   ```
-
+3. **Replace** JAR file
 4. **Restart** server
-
-5. **Test** functionality:
-   - Run `/enhancedcompass help`
-   - Try a structure search
-   - Try a biome search
-   - Check boss bar appears
-
+5. **Test** functionality
 6. **Verify** config compatibility (check console for warnings)
 
 ### Version Compatibility
@@ -711,60 +520,11 @@ The plugin updates boss bars every 10 ticks (0.5 seconds) for all players holdin
 
 ---
 
-## Support & Resources
-
-### Getting Help
-
-1. **Check Documentation**: End user guide, this admin guide, dev guide
-2. **Console Logs**: Check for error messages on startup and during use
-3. **Test Mode**: Try commands from console to rule out permission issues
-4. **Community**: Check with other server admins
-
-### Reporting Issues
-
-When reporting issues, include:
-- Server version (Paper/Spigot + MC version)
-- Plugin version
-- Config.yml contents
-- Console error messages
-- Steps to reproduce
-
----
-
-## FAQ for Admins
-
-**Q: Does this work with custom world generators?**  
-A: Yes, as long as structures and biomes are properly registered. Some custom generators may not include all structures/biomes.
-
-**Q: Can I disable compass for specific player ranks?**  
-A: Yes, don't grant `enhancedcompass.use` permission to those ranks.
-
-**Q: How much disk space does player data use?**  
-A: ~200 bytes per player. 1,000 players = ~200 KB. Negligible.
-
-**Q: Can I pre-load structures to speed up searches?**  
-A: No, the plugin uses Minecraft's built-in structure location API which requires real-time world queries.
-
-**Q: What happens if a player's target world is deleted?**  
-A: Plugin logs a warning and the target won't load. Player can set a new target normally.
-
-**Q: Can I migrate player data from another compass plugin?**  
-A: Not directly, but you can manually create YAML files in the correct format.
-
-**Q: Does this work on 1.18 or earlier?**  
-A: The plugin is designed for 1.19+. Earlier versions may work but are unsupported.
-
-**Q: Can I add custom structures/biomes to the config?**  
-A: Yes! Any structure or biome registered in Minecraft's Registry will work. Just add it to the config.
-
----
-
 ## Quick Reference
 
 ### Essential Commands
 ```
-/enhancedcompass reload    # Reload config
-enhancedcompass reload     # Console reload
+/enhancedcompass reload    # Reload config (admin)
 ```
 
 ### Important Permissions
@@ -781,7 +541,7 @@ plugins/EnhancedCompass/playerdata/*.yml        # Player data
 
 ### Configuration Sections
 ```yaml
-search-radius: 100                              # Search distance
+search-radius: 100                              # Search distance in chunks
 blacklisted-worlds: []                          # Disabled worlds
 enabled-structures.normal: {}                   # Overworld structures
 enabled-structures.nether: {}                   # Nether structures
@@ -790,17 +550,6 @@ enabled-biomes.normal: {}                       # Overworld biomes
 enabled-biomes.nether: {}                       # Nether biomes
 enabled-biomes.the_end: {}                      # End biomes
 ```
-
----
-
-## Changelog Format
-
-When updating, check for:
-- New structure types added to config
-- New biome types added to config
-- Permission changes
-- Command changes
-- Breaking config changes
 
 ---
 

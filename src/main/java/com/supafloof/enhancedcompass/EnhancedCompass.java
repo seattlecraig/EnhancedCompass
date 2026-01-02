@@ -48,9 +48,16 @@ import java.util.stream.Collectors;
  *   <li>Real-time boss bar distance display (updates every 0.5 seconds)</li>
  *   <li>Complete tab completion for all commands and structure types</li>
  *   <li>Complete tab completion for all biome types</li>
- *   <li>Player data persistence - targets saved between sessions</li>
+ *   <li>Player data persistence - targets saved to disk when set and on logout</li>
  *   <li>Hot-reload capability for configuration changes</li>
  * </ul>
+ * 
+ * <p><b>Note on Data Persistence:</b></p>
+ * Player targets ARE saved to disk (in playerdata/*.yml files) when set and when players quit.
+ * However, targets are NOT automatically restored when players rejoin the server. The 
+ * loadPlayerTarget() method exists and is fully implemented, but there is no PlayerJoinEvent
+ * handler to call it. To enable automatic target restoration on join, a join event handler
+ * would need to be added. See loadPlayerTarget() JavaDoc for implementation details.
  * 
  * <p><b>Technical Architecture:</b></p>
  * <ul>
@@ -58,6 +65,7 @@ import java.util.stream.Collectors;
  *   <li>Uses Bukkit Registry API for accurate structure lookups</li>
  *   <li>Uses Bukkit Registry API for accurate biome lookups</li>
  *   <li>Asynchronous boss bar updates via scheduled tasks</li>
+ *   <li>Asynchronous biome searches to prevent server lag</li>
  *   <li>YAML-based player data persistence</li>
  *   <li>Modular design with inner classes for organization</li>
  * </ul>
@@ -70,6 +78,8 @@ import java.util.stream.Collectors;
  *   <li>Boss bars only appear when players are actively holding a compass (main or off hand)</li>
  *   <li>Distance calculations are 3D Euclidean distance in blocks</li>
  *   <li>Cross-dimension targets show "Not in same dimension" warning in boss bar</li>
+ *   <li>Biome searches run asynchronously to avoid blocking the main server thread</li>
+ *   <li>Structure searches run synchronously (Bukkit's locateNearestStructure is already optimized)</li>
  * </ul>
  * 
  * @author SupaFloof Games, LLC
@@ -80,6 +90,15 @@ public class EnhancedCompass extends JavaPlugin implements CommandExecutor, TabC
     /**
      * Maps each player's UUID to their current compass target.
      * This stores both the target type name (structure or biome) and the exact location coordinates.
+     * 
+     * <p><b>Lifecycle:</b></p>
+     * <ul>
+     *   <li>Entries added when player successfully locates a structure/biome</li>
+     *   <li>Entries persist in memory until server shutdown or plugin disable</li>
+     *   <li>Entries are NOT automatically restored on player join (see loadPlayerTarget())</li>
+     *   <li>Entries are NOT removed when player quits (allows boss bar cleanup to still work)</li>
+     * </ul>
+     * 
      * Key: Player UUID
      * Value: CompassTarget object containing target type and location
      */
@@ -112,8 +131,19 @@ public class EnhancedCompass extends JavaPlugin implements CommandExecutor, TabC
     /**
      * Directory where individual player data files are stored.
      * Each player gets a UUID.yml file containing their last compass target.
-     * Location: plugins/EnhancedCompass/playerdata/
-     * File format: UUID.yml containing target-type, target-name, world, x, y, z
+     * 
+     * <p><b>Location:</b> plugins/EnhancedCompass/playerdata/</p>
+     * 
+     * <p><b>File Format:</b> UUID.yml containing:</p>
+     * <ul>
+     *   <li>structure-type: The target type in UPPER_CASE (e.g., "ANCIENT_CITY")</li>
+     *   <li>world: The world name (e.g., "world")</li>
+     *   <li>x, y, z: Coordinates as doubles</li>
+     * </ul>
+     * 
+     * <p><b>Note:</b> Files are saved when targets are set and on player quit,
+     * but are NOT automatically loaded on player join. The loadPlayerTarget()
+     * method exists for this purpose but is not currently wired to any event.</p>
      */
     private File playerDataFolder;
     
@@ -187,9 +217,17 @@ public class EnhancedCompass extends JavaPlugin implements CommandExecutor, TabC
      *   <li>Log shutdown message</li>
      * </ol>
      * 
-     * <p><b>Important:</b> Player targets are NOT saved here - they're saved immediately
-     * when set and when players quit. This is intentional to prevent data loss from
-     * unexpected shutdowns or crashes.</p>
+     * <p><b>Important - Data Persistence:</b></p>
+     * Player targets are NOT saved in this method. They are saved:
+     * <ul>
+     *   <li>Immediately when a target is set (after structure/biome search completes)</li>
+     *   <li>When each player quits (in onPlayerQuit event handler)</li>
+     * </ul>
+     * This design ensures targets persist even if the server crashes unexpectedly,
+     * since data is already on disk before shutdown occurs.
+     * 
+     * <p><b>Note:</b> Although player data is saved to disk, it is NOT automatically
+     * restored when players rejoin. See loadPlayerTarget() for details.</p>
      */
     @Override
     public void onDisable() {
@@ -1208,21 +1246,28 @@ public class EnhancedCompass extends JavaPlugin implements CommandExecutor, TabC
     
     /**
      * Event handler called when a player disconnects from the server.
-     * Performs cleanup operations to prevent memory leaks and save player data.
+     * Performs cleanup operations to prevent memory leaks and ensure data persistence.
      * 
      * <p><b>Cleanup Operations:</b></p>
      * <ol>
      *   <li>Remove and hide player's boss bar if active</li>
-     *   <li>Save player's current compass target to disk</li>
+     *   <li>Save player's current compass target to disk (redundant save for safety)</li>
      * </ol>
      * 
-     * <p><b>Data Persistence:</b></p>
-     * Player targets are saved immediately when:
+     * <p><b>Data Persistence Strategy:</b></p>
+     * Player targets are saved at multiple points for redundancy:
      * <ul>
-     *   <li>Target is set (after finding a structure)</li>
-     *   <li>Player quits (here)</li>
+     *   <li>Immediately when target is set (after successful structure/biome search)</li>
+     *   <li>When player quits (here - acts as a safety backup)</li>
      * </ul>
-     * This ensures targets persist across sessions even if server crashes.
+     * The save on quit is technically redundant since data is already saved when the
+     * target is set, but provides an extra safety net in case something went wrong.
+     * 
+     * <p><b>Note on Target Restoration:</b></p>
+     * While targets are saved here, they are NOT automatically restored when the player
+     * rejoins. The loadPlayerTarget() method exists for this purpose but is not currently
+     * connected to any join event. The playerTargets map entry is also NOT removed here,
+     * which is intentional - it allows any final boss bar cleanup to complete properly.
      * 
      * <p><b>Boss Bar Cleanup:</b></p>
      * Boss bars must be explicitly removed when players quit to:
@@ -1271,25 +1316,31 @@ public class EnhancedCompass extends JavaPlugin implements CommandExecutor, TabC
      * 
      * <p><b>Saved Data:</b></p>
      * <ul>
-     *   <li>structure-type: Structure type in UPPER_CASE format</li>
+     *   <li>structure-type: Structure or biome type in UPPER_CASE format</li>
      *   <li>world: World name (e.g., "world", "world_nether", "world_the_end")</li>
      *   <li>x: X coordinate (double precision)</li>
      *   <li>y: Y coordinate (double precision)</li>
      *   <li>z: Z coordinate (double precision)</li>
      * </ul>
      * 
-     * <p><b>When to Save:</b></p>
+     * <p><b>When Called:</b></p>
      * <ul>
-     *   <li>Immediately after setting a new compass target</li>
-     *   <li>When player quits the server</li>
+     *   <li><b>Primary:</b> Immediately after setting a new compass target (structure or biome found)</li>
+     *   <li><b>Backup:</b> When player quits the server (onPlayerQuit handler)</li>
      * </ul>
+     * The immediate save on target set is the primary persistence mechanism.
+     * The save on quit is a redundant backup for safety.
+     * 
+     * <p><b>Note on Loading:</b></p>
+     * Saved data can be loaded by loadPlayerTarget(), but this is NOT automatically
+     * called on player join. The infrastructure exists but is not wired up.
      * 
      * <p><b>Error Handling:</b></p>
      * If save fails, a warning is logged but execution continues normally.
      * This prevents a save error from breaking compass functionality.
      * 
      * @param player The player whose target to save
-     * @param target The compass target containing structure type and location
+     * @param target The compass target containing structure/biome type and location
      */
     private void savePlayerTarget(Player player, CompassTarget target) {
         // Validate inputs - don't save if target or location is null
@@ -1328,7 +1379,14 @@ public class EnhancedCompass extends JavaPlugin implements CommandExecutor, TabC
     
     /**
      * Loads a player's compass target from their saved data file.
-     * Called when a player joins the server to restore their last compass target.
+     * Designed to restore a player's last compass target when they join the server.
+     * 
+     * <p><b>IMPORTANT - CURRENTLY UNUSED:</b></p>
+     * This method exists but is NOT currently being invoked anywhere in the plugin.
+     * There is no PlayerJoinEvent handler registered to call this method.
+     * To enable target restoration on player join, a PlayerJoinEvent handler would
+     * need to be added that calls this method. The method is fully implemented and
+     * ready to use - it just needs to be wired up to the join event.
      * 
      * <p><b>Load Process:</b></p>
      * <ol>
@@ -1353,9 +1411,15 @@ public class EnhancedCompass extends JavaPlugin implements CommandExecutor, TabC
      * A delayed notification (1 second after join) informs the player their
      * target was restored. Delay prevents message from being lost in join spam.
      * 
-     * <p><b>Usage:</b></p>
-     * This method should be called from a PlayerJoinEvent handler to restore
-     * targets when players log in.
+     * <p><b>To Enable This Feature:</b></p>
+     * Add a PlayerJoinEvent handler to onEnable() that calls this method:
+     * <pre>
+     * {@literal @}EventHandler
+     * public void onPlayerJoin(PlayerJoinEvent event) {
+     *     loadPlayerTarget(event.getPlayer());
+     * }
+     * </pre>
+     * And import: org.bukkit.event.player.PlayerJoinEvent
      * 
      * @param player The player whose target to load
      */
@@ -1426,50 +1490,64 @@ public class EnhancedCompass extends JavaPlugin implements CommandExecutor, TabC
     
     /**
      * Inner class representing a compass target.
-     * Stores both the structure type name and the exact location coordinates.
+     * Stores both the target type name (structure or biome) and the exact location coordinates.
      * This is a simple immutable data holder (all fields are final).
      * 
      * <p><b>Design Pattern:</b></p>
      * This is a simple Data Transfer Object (DTO) with no business logic.
      * Fields are final to ensure immutability and thread safety.
      * 
+     * <p><b>Target Type Flexibility:</b></p>
+     * The structureType field can hold either:
+     * <ul>
+     *   <li>Structure types: "ANCIENT_CITY", "VILLAGE_PLAINS", "STRONGHOLD", etc.</li>
+     *   <li>Biome types: "DARK_FOREST", "CHERRY_GROVE", "MUSHROOM_FIELDS", etc.</li>
+     * </ul>
+     * The field name is "structureType" for historical reasons but it's used for both.
+     * 
      * <p><b>Usage:</b></p>
      * CompassTarget instances are created when:
      * <ul>
      *   <li>Player searches for a structure and one is found</li>
-     *   <li>Player's saved target is loaded from disk on join</li>
+     *   <li>Player searches for a biome and one is found</li>
+     *   <li>Player's saved target is loaded from disk (if loadPlayerTarget is called)</li>
      * </ul>
      * 
      * CompassTarget instances are stored in:
      * <ul>
-     *   <li>playerTargets map (UUID → CompassTarget)</li>
-     *   <li>Player data YAML files (persisted to disk)</li>
+     *   <li>playerTargets map (UUID → CompassTarget) for boss bar updates</li>
+     *   <li>Player data YAML files (persisted to disk) for potential restoration</li>
      * </ul>
      * 
      * <p><b>Thread Safety:</b></p>
      * This class is immutable (all fields final, no setters), making it inherently thread-safe.
-     * Multiple threads can safely read the same CompassTarget instance.
+     * Multiple threads can safely read the same CompassTarget instance without synchronization.
      */
     private static class CompassTarget {
         /**
-         * The structure type in UPPER_CASE format (e.g., "ANCIENT_CITY", "VILLAGE_PLAINS").
-         * This matches Minecraft's structure naming convention.
-         * Used for display in boss bars and save files.
+         * The target type in UPPER_CASE format.
+         * Can be either a structure type (e.g., "ANCIENT_CITY", "VILLAGE_PLAINS")
+         * or a biome type (e.g., "DARK_FOREST", "CHERRY_GROVE").
+         * 
+         * <p><b>Note:</b> The field is named "structureType" for historical reasons,
+         * but it stores both structure and biome type names.</p>
+         * 
+         * Used for display in boss bars, chat messages, and save files.
          */
         final String structureType;
         
         /**
-         * The exact location of the structure in the world.
+         * The exact location of the target (structure or biome) in the world.
          * Includes world reference and X, Y, Z coordinates.
-         * Used for compass targeting and distance calculations.
+         * Used for vanilla compass targeting (setCompassTarget) and distance calculations.
          */
         final Location location;
         
         /**
          * Constructor for creating a new compass target.
          * 
-         * @param structureType The structure type in UPPER_CASE format
-         * @param location The location of the structure
+         * @param structureType The target type in UPPER_CASE format (structure or biome name)
+         * @param location The location of the target (structure or biome)
          */
         CompassTarget(String structureType, Location location) {
             this.structureType = structureType;
@@ -1486,6 +1564,7 @@ public class EnhancedCompass extends JavaPlugin implements CommandExecutor, TabC
      *   <li>search-radius: Search radius in chunks (default: 100)</li>
      *   <li>blacklisted-worlds: List of world names where plugin is disabled</li>
      *   <li>enabled-structures: Per-dimension structure whitelists</li>
+     *   <li>enabled-biomes: Per-dimension biome whitelists</li>
      * </ul>
      * 
      * <p><b>Config Structure Example:</b></p>
@@ -1504,6 +1583,16 @@ public class EnhancedCompass extends JavaPlugin implements CommandExecutor, TabC
      *     bastion_remnant: true
      *   the_end:
      *     end_city: true
+     * enabled-biomes:
+     *   normal:
+     *     dark_forest: true
+     *     cherry_grove: true
+     *     mushroom_fields: true
+     *   nether:
+     *     crimson_forest: true
+     *     warped_forest: true
+     *   the_end:
+     *     end_highlands: true
      * </pre>
      * 
      * <p><b>Dimension Mapping:</b></p>
@@ -1612,27 +1701,29 @@ public class EnhancedCompass extends JavaPlugin implements CommandExecutor, TabC
          *   <li>Get FileConfiguration from plugin</li>
          *   <li>Load search-radius (with default)</li>
          *   <li>Load blacklisted-worlds list</li>
-         *   <li>Load enabled structures for each dimension</li>
+         *   <li>Load enabled structures for each dimension (normal, nether, the_end)</li>
+         *   <li>Load enabled biomes for each dimension (normal, nether, the_end)</li>
          * </ol>
          * 
          * <p><b>Default Values:</b></p>
          * <ul>
-         *   <li>search-radius: 100 (if not set)</li>
+         *   <li>search-radius: 100 chunks (if not set)</li>
          *   <li>blacklisted-worlds: empty list (if not set)</li>
          *   <li>enabled-structures: empty maps (if not set)</li>
+         *   <li>enabled-biomes: empty maps (if not set)</li>
          * </ul>
          * 
          * <p><b>Configuration Sections:</b></p>
-         * enabled-structures has three subsections:
+         * enabled-structures and enabled-biomes each have three subsections:
          * <ul>
-         *   <li>normal: Overworld structures</li>
-         *   <li>nether: Nether structures</li>
-         *   <li>the_end: End structures</li>
+         *   <li>normal: Overworld structures/biomes</li>
+         *   <li>nether: Nether structures/biomes</li>
+         *   <li>the_end: End structures/biomes</li>
          * </ul>
          * 
          * <p><b>Case Handling:</b></p>
-         * Structure names in config can be lowercase (ancient_city),
-         * but are stored internally as UPPER_CASE (ANCIENT_CITY) for consistency.
+         * Structure and biome names in config can be lowercase (e.g., ancient_city, dark_forest),
+         * but are stored internally as UPPER_CASE (e.g., ANCIENT_CITY, DARK_FOREST) for consistency.
          */
         private void loadConfig() {
             // Get the plugin's FileConfiguration

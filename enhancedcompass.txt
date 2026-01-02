@@ -44,30 +44,43 @@ PAGE 4
 SPECIAL SEARCHES
 
 /enhancedcompass village
-Finds the nearest village of ANY type (plains, desert, snowy, etc.)
+Finds the nearest village of ANY type (plains, desert, snowy, savanna, taiga)
 
 /enhancedcompass anything
 Finds the nearest structure of ANY type
 =====================================
 PAGE 5
 =====================================
-EXAMPLE STRUCTURES
+OVERWORLD STRUCTURES
 
-Overworld:
 ancient_city
 stronghold
 village_plains
 village_desert
+village_snowy
+village_savanna
+village_taiga
 mansion
 monument
-temple_desert
-jungle_pyramid
-mineshaft
-shipwreck
+desert_pyramid
 =====================================
 PAGE 6
 =====================================
-EXAMPLE STRUCTURES
+MORE OVERWORLD STRUCTURES
+
+jungle_pyramid
+mineshaft
+shipwreck
+buried_treasure
+pillager_outpost
+trail_ruins
+trial_chambers
+swamp_hut
+igloo
+=====================================
+PAGE 7
+=====================================
+NETHER & END STRUCTURES
 
 Nether:
 fortress
@@ -78,11 +91,10 @@ end_city
 
 Use tab completion to see all available structures!
 =====================================
-PAGE 7
+PAGE 8
 =====================================
-EXAMPLE BIOMES
+OVERWORLD BIOMES
 
-Overworld:
 dark_forest
 cherry_grove
 mushroom_fields
@@ -93,11 +105,25 @@ badlands
 ice_spikes
 flower_forest
 mangrove_swamp
+=====================================
+PAGE 9
+=====================================
+MORE OVERWORLD BIOMES
+
 pale_garden
+meadow
+bamboo_jungle
+old_growth_birch_forest
+sunflower_plains
+windswept_hills
+frozen_peaks
+savanna
+taiga
+grove
 =====================================
-PAGE 8
+PAGE 10
 =====================================
-EXAMPLE BIOMES
+NETHER & END BIOMES
 
 Nether:
 crimson_forest
@@ -108,10 +134,8 @@ basalt_deltas
 End:
 end_highlands
 small_end_islands
-
-Use tab completion to see all available biomes!
 =====================================
-PAGE 9
+PAGE 11
 =====================================
 BIOME COMMAND
 
@@ -124,7 +148,7 @@ Result:
 "Compass now pointing to Dark Forest biome!"
 "Distance: 523 blocks"
 =====================================
-PAGE 10
+PAGE 12
 =====================================
 BOSS BAR COLORS
 
@@ -134,7 +158,7 @@ Target is in your dimension
 Red target name + Red warning:
 Target is in a different dimension
 =====================================
-PAGE 11
+PAGE 13
 =====================================
 BOSS BAR BEHAVIOR
 
@@ -143,7 +167,7 @@ BOSS BAR BEHAVIOR
 - Disappears when you put the compass away
 - Shows real-time distance in blocks
 =====================================
-PAGE 12
+PAGE 14
 =====================================
 FINDING A VILLAGE
 
@@ -157,7 +181,7 @@ Result:
 Boss bar appears:
 Village Plains - 892 blocks
 =====================================
-PAGE 13
+PAGE 15
 =====================================
 FINDING ANCIENT CITY
 
@@ -170,7 +194,7 @@ Result:
 
 Follow compass, dig down when close!
 =====================================
-PAGE 14
+PAGE 16
 =====================================
 FINDING A BIOME
 
@@ -183,7 +207,7 @@ Result:
 
 Follow compass to find pink trees!
 =====================================
-PAGE 15
+PAGE 17
 =====================================
 USING "ANYTHING"
 
@@ -194,7 +218,7 @@ Finds whatever structure is closest to you.
 
 Good for random exploration!
 =====================================
-PAGE 16
+PAGE 18
 =====================================
 CHECKING YOUR TARGET
 
@@ -202,14 +226,14 @@ Command:
 /enhancedcompass current
 
 Shows:
-"Current target (Structure): Stronghold"
+"Current target: Stronghold"
 "Distance: 3,421 blocks"
 
-or:
-"Current target (Biome): Dark Forest"
+Or for biomes:
+"Current target: Dark Forest"
 "Distance: 456 blocks"
 =====================================
-PAGE 17
+PAGE 19
 =====================================
 TAB COMPLETION
 
@@ -223,20 +247,16 @@ Completes to:
 
 Works for structures AND biomes!
 =====================================
-PAGE 18
+PAGE 20
 =====================================
 BIOME TAB COMPLETION
 
 Type:
 /enhancedcompass biome [TAB]
 
-Shows all available biomes:
-dark_forest
-cherry_grove
-mushroom_fields
-...and more!
+Shows all available biomes for your current dimension.
 =====================================
-PAGE 19
+PAGE 21
 =====================================
 PERSISTENT TARGETS
 
@@ -247,9 +267,9 @@ It stays set even if you:
 - Die
 - Server restarts
 
-To change target, just search for a new structure or biome.
+To change target, run a new search command.
 =====================================
-PAGE 20
+PAGE 22
 =====================================
 DISTANCE EXPLAINED
 
@@ -259,38 +279,28 @@ Includes height (Y-level).
 
 Actual walking distance may be longer due to terrain.
 =====================================
-PAGE 21
+PAGE 23
 =====================================
 CROSS-DIMENSION
 
-If you set a target in the Overworld, then go to the Nether:
+If you set a target in the Overworld then go to the Nether:
 
 Boss bar shows:
-"End City - Not in same dimension"
+"Ancient City - Not in same dimension"
 
 Return to the correct dimension to see the real distance.
 =====================================
-PAGE 22
-=====================================
-STRUCTURE SEARCH
-
-When you run a search command, the plugin:
-
-1. Searches the world
-2. Finds the nearest match
-3. Points your compass to it
-4. Shows you the distance
-=====================================
-PAGE 23
-=====================================
-PERMISSION REQUIRED
-
-You need the permission:
-enhancedcompass.use
-
-If you see "You don't have permission" ask your server admin.
-=====================================
 PAGE 24
+=====================================
+UNDERGROUND TARGETS
+
+Ancient cities and deep dark biomes are underground.
+
+When the distance gets small, start digging down!
+
+The compass points to the target location, not the entrance.
+=====================================
+PAGE 25
 =====================================
 QUICK REFERENCE
 
@@ -308,20 +318,6 @@ Find specific biome
 
 /enhancedcompass current
 Check target
-=====================================
-PAGE 25
-=====================================
-TIPS
-
-1. Use tab completion to explore available structures and biomes
-
-2. Try "anything" for random exploration
-
-3. The compass always points to your target
-
-4. Hold compass to see boss bar
-
-5. Distance updates in real-time
 =====================================
 PAGE 26
 =====================================
